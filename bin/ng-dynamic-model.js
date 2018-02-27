@@ -892,7 +892,11 @@ var _dynamicModel = __webpack_require__(10);
 
 var _fieldModelFor = __webpack_require__(11);
 
+var _fieldMultiModelFor = __webpack_require__(16);
+
 var _fieldConditionFor = __webpack_require__(12);
+
+var _fieldCondition = __webpack_require__(17);
 
 var _fieldValidationFor = __webpack_require__(14);
 
@@ -911,7 +915,7 @@ function directive(ctor) {
     return factory;
 }
 
-var lib = angular.module('ng-dynamic-model', []).config(_config.ValidationConfig).provider('ValidatorFactory', _validatorFactory.ValidatorFactoryProvider).service('ModelBuilder', _modelBuilder.ModelBuilder).directive('dynamicModel', directive(_dynamicModel.DynamicModelDirective)).directive('fieldModelFor', directive(_fieldModelFor.FieldModelForDirective)).directive('fieldConditionFor', directive(_fieldConditionFor.FieldConditionForDirective)).directive('fieldValidationFor', directive(_fieldValidationFor.FieldValidationForDirective)).directive('fieldValidationMessageFor', directive(_fieldValidationMessageFor.FieldValidationMessageForDirective));
+var lib = angular.module('ng-dynamic-model', []).config(_config.ValidationConfig).provider('ValidatorFactory', _validatorFactory.ValidatorFactoryProvider).service('ModelBuilder', _modelBuilder.ModelBuilder).directive('dynamicModel', directive(_dynamicModel.DynamicModelDirective)).directive('fieldModelFor', directive(_fieldModelFor.FieldModelForDirective)).directive('fieldMultiModelFor', directive(_fieldMultiModelFor.FieldMultiModelForDirective)).directive('fieldConditionFor', directive(_fieldConditionFor.FieldConditionForDirective)).directive('fieldCondition', directive(_fieldCondition.FieldConditionDirective)).directive('fieldValidationFor', directive(_fieldValidationFor.FieldValidationForDirective)).directive('fieldValidationMessageFor', directive(_fieldValidationMessageFor.FieldValidationMessageForDirective));
 
 exports.default = lib.name;
 
@@ -1526,6 +1530,133 @@ FieldValidationMessageForDirective.prototype = {
             $element.text(valid ? '' : error);
             $element[!valid && error ? 'show' : 'hide']();
         }
+    }
+};
+
+/***/ }),
+/* 16 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+exports.FieldMultiModelForDirective = FieldMultiModelForDirective;
+function FieldMultiModelForDirective(parse) {
+    this.parse = parse;
+}
+
+FieldMultiModelForDirective.prototype = {
+    restrict: 'A',
+    require: '^^dynamicModel',
+    dependencies: ['$parse'],
+    link: function link(scope, $element, attrs, modelCtrl) {
+        var _this = this;
+
+        if (!attrs['fieldMultiModelFor'] || !attrs['value'] && !attrs['ngValue']) throw new TypeError('form-multi-model: missing required attribute "' + (!attrs['fieldMultiModelFor'] ? 'field-multi-model' : 'value') + '"');
+
+        var field = modelCtrl.model.field(attrs['fieldMultiModelFor']);
+        var element = $element.get(0);
+        var allowMultiple = attrs['type'] === 'checkbox';
+        var trackBy = attrs['trackBy'];
+
+        var value = attrs['ngValue'] ? this.parse(attrs['ngValue'])(scope, modelCtrl.model.getState()) : attrs['value'];
+
+        $element.on('change', function () {
+            if (allowMultiple || _this.checked) scope.$apply(processChange);
+        });
+
+        var unbindChange = field.on('change', onUpdate);
+        var unbindToggle = field.on('toggle', onUpdate);
+
+        // Remove all listeners once the directive is destroyed.
+        this.$onDestroy = function () {
+            unbindChange();
+            unbindToggle();
+        };
+
+        onUpdate(field);
+
+        function processChange() {
+            if (!allowMultiple) return field.setValue(value);
+
+            var model = field.value(),
+                idx = -1;
+
+            if (!Array.isArray(model)) model = model ? [model] : [];
+
+            for (var i = 0, j = model.length; i < j; ++i) {
+                if (compareValues(model[i])) {
+                    idx = i;
+                    break;
+                }
+            }
+
+            if (element.checked && idx < 0) {
+                model.push(value);
+                field.setValue(model);
+            } else if (!element.checked && idx >= 0) {
+                model.splice(idx, 1);
+                field.setValue(model);
+            }
+        }
+
+        function onUpdate(field) {
+            var modelValue = field.value();
+            var shouldBeChecked = !Array.isArray(modelValue) && compareValues(modelValue) || Array.isArray(modelValue) && modelValue.some(compareValues);
+
+            if (element.checked !== shouldBeChecked) element.checked = shouldBeChecked;
+        }
+
+        function compareValues(modelValue) {
+            if (!trackBy) return modelValue == value;
+
+            return modelValue && value && (typeof modelValue === 'undefined' ? 'undefined' : _typeof(modelValue)) === (typeof value === 'undefined' ? 'undefined' : _typeof(value)) && modelValue.hasOwnProperty(trackBy) && value.hasOwnProperty(trackBy) && modelValue[trackBy] == value[trackBy];
+        }
+    }
+};
+
+/***/ }),
+/* 17 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.FieldConditionDirective = FieldConditionDirective;
+
+var _createCondition = __webpack_require__(13);
+
+function FieldConditionDirective(parser) {
+    this.parser = parser;
+}
+
+FieldConditionDirective.prototype = {
+    restrict: 'A',
+    dependencies: ['$parse'],
+    require: '^^dynamicModel',
+    link: function link(scope, $element, attrs, modelCtrl) {
+        if (!attrs['fieldCondition']) throw new TypeError('field-condition-for: missing required attribute "field-condition"');
+
+        var speed = 0;
+
+        var off = (0, _createCondition.createCondition)(attrs['fieldCondition'], modelCtrl.model, this.parser, scope, function (result) {
+            $element[result ? 'show' : 'hide'](speed);
+        });
+
+        // Update the speed after the first run
+        speed = attrs['speed'] ? parseInt(attrs['speed'], 10) : 300;
+
+        // When destroyed, release the condition
+        this.$onDestroy = off;
     }
 };
 
