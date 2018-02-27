@@ -5,29 +5,16 @@ export class ModelField {
 
         this.$$model = model;
         this.$$value = value;
-        this.$$q = q;
         this.$$active = true;
-        this.$$dirty = false;
         this.$$listeners = {};
-        this.$$validationId = 0;
 
         // Set up an internal watch to propagate external value changes
         this.watch((newValue, oldValue, path) => {
-            if (newValue !== this.$$value) {
+            if (newValue !== this.$$value) 
                 this.$$value = newValue;
-                this.setDirty(true);
-            }
 
             this.$emit('change', this, newValue, oldValue);
         });
-    }
-
-    isValid() {
-        return this.isValidated() && this.$$valid;
-    }
-
-    isValidated() {
-        return this.$$validated;
     }
 
     isDirty() {
@@ -38,32 +25,13 @@ export class ModelField {
         return this.$$active;
     }
 
-    val() {
+    value() {
         return this.$$value;
     }
 
-    getErrors() {
-        return this.$$errors;
-    }
-
-    hasValidation() {
-        return (this.$$validators && this.$$validators.length)
-            || (this.$$asyncValidators && this.$$asyncValidators.length);
-    }
-
     setValue(value) {
-        // clear out the last active value as it will no longer be relevant.
-        if (this.$$lastActiveValue)
-            this.$$lastActiveValue = undefined;
-
         // This will flow through to the internal watcher.
         this.$$model.set(this.name, value);
-    }
-
-    setDirty(dirty) {
-        this.$$dirty = !!dirty;
-        this.$$errors = undefined;
-        this.setValidated(false);
     }
 
     setValidated(validated) {
@@ -73,70 +41,22 @@ export class ModelField {
     setActive(active) {
         this.$$active = !!active;
 
-        if (this.$$active && this.$$lastActiveValue)
+        if (this.$$active && this.$$lastActiveValue) {
             this.setValue(this.$$lastActiveValue);
+        }
         else if (!this.$$active) {
+            const current = this.value();
+
             // Cache the current value for when/if the field is re-activated.
-            const last = this.value();
-            this.setValue(undefined);
-            this.$$lastActiveValue = last;
+            if (typeof(current) !== 'undefined') { 
+                this.setValue(undefined);
+                this.$$lastActiveValue = current;
+            }
         }
 
         this.$emit('toggle', this, this.$$active);
     }
 
-    addValidator(validator) {
-        if (!this.$$validators)
-            this.$$validators = [];
-        this.$$validators.push(validator);
-        return this;
-    }
-
-    addAsyncValidator(validator) {
-        if (!this.$$asyncValidators)
-            this.$$asyncValidators = [];
-        this.$$asyncValidators.push(validator);
-        return this;
-    }
-
-    validate() {
-        const hasAsyncValidators = this.$$asyncValidators && this.$$asyncValidators.length;
-        const hasValidators = this.$$validators && this.$$validators.length;
-
-        const errors = [];
-        const result = !hasValidators || this.$processValidators(appendError);
-
-        if (!result || !hasAsyncValidators) {
-            // Can return early
-            this.$completeValidation(result, errors);
-            return this.$$q.resolve(result);
-        }
-
-        // Run the async validators
-        const ref = ++this.$$validationId;
-
-        if (!this.$$deferredValidation)
-            this.$$deferredValidation = this.$$q.defer();
-
-        this.$processAsyncValidators(appendError).then(result => {
-            if (ref === this.$$validationId)
-                this.$completeValidation(result, errors);
-        }, err => {
-            if (ref === this.$$validationId) {
-                const deferred = this.$$deferredValidation;
-                this.$$deferredValidation = null;
-                if (deferred) deferred.reject(err);
-            }
-        });
-
-        return this.$$deferredValidation.promise;
-
-        function appendError(err) {
-            if (typeof(err) === 'string')
-                err = err.replace('%field%', this.label);
-            errors.push(err);
-        }
-    }
 
     watch(fn) {
         return this.$$model.watch(this.name, fn);
@@ -147,9 +67,9 @@ export class ModelField {
             throw new TypeError('fn must be a valid function');
 
         if (!this.$$listeners.hasOwnProperty(type))
-            this.$$listeners[type] = [ fn ];
-        else
-            this.$$listeners[type].push(fn);
+            this.$$listeners[type] = [];
+
+        this.$$listeners[type].push(fn);
 
         return () => this.off(type, fn);
     }
@@ -193,41 +113,6 @@ export class ModelField {
                 break;
             }
         }
-    }
-
-    $processValidators(appendError) {
-        const validators = this.$$validators;
-
-        for(let i = 0, j = validators.length; i < j; ++i) {
-            if (!validators[i](this, appendError))
-                return false;
-        }
-
-        return true;
-    }
-
-    $processAsyncValidators(appendError) {
-        const validators = this.$$asyncValidators;
-
-        if (validators && validators.length) {
-            const promises = validators.map(v => v(this, appendError));
-            return this.$$q.all(promises).then(results => results.every(result => result));
-        }
-    }
-
-    $completeValidation(valid, errors) {
-        const previous = this.$$valid;
-        const deferred = this.$$deferredValidation;
-
-        this.$$valid = valid;
-        this.$$errors = errors;
-        this.$$deferredValidation = null;
-        this.setValidated(true);
-
-        // Emit the event and then resolve the promise.
-        // This could be a bit racy.
-        this.$emit('validate', this, previous);  
-        if (deferred) deferred.resolve(valid); 
     }
 }
 

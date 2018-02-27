@@ -67,6 +67,21 @@ export class Model {
         const startValue = this.get(path);
         return this.$$fields[path] = new ModelField(this, path, startValue);
     }
+
+    $findChildFields(path) {
+        const value = this.get(path, null);
+        const fields = [];
+
+        if (value && typeof(value) === 'object') {
+            Object.keys(value).forEach(childProp => {
+                const lookup = path + '.' + childProp;
+                if (this.$$fields.hasOwnProperty(lookup))
+                    fields.push(this.$$fields[lookup]);
+            });
+        }
+
+        return fields;
+    }
 }
 
 function defaultComparer(o1, o2) {

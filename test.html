@@ -19,12 +19,17 @@
 
     <body ng-app="test-app" ng-controller="TestController" id="content">
         <form dynamic-model="::model">
-            <input type="text" ng-model="test1" field-model-for="nested.test1" />
+            <input type="text" ng-model="top" field-model-for="top" />
+            <input type="text" ng-model="next" field-model-for="next" />
 
-            <div field-condition-for="nested.test2" condition="[nested.test1] === 'hello'">
-                 <input type="text" ng-model="test2" field-model-for="nested.test2" />
+            <div field-condition-for="nested" condition="[top] === 'required'">
+                <input type="text" ng-model="test1" field-model-for="nested.test1" />
+
+                <div field-condition-for="nested.test2" condition="[next] === 'hello'">
+                    <input type="text" ng-model="test2" field-model-for="nested.test2" />
+                </div>
             </div>
-
+            
             <button type="button" ng-click="model.set('nested', {})">Reset</button>
 
             <pre ng-bind="model.getState() | json"></pre>

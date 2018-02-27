@@ -16,7 +16,7 @@ FieldConditionForDirective.prototype = {
         let speed = 0;
         
         const off = createCondition(attrs['condition'], modelCtrl.model, this.parser, scope, result => {
-            field[result ? 'activate' : 'deactivate']();
+            field.setActive(result);
             $element[result ? 'show' : 'hide'](speed);
         });
 

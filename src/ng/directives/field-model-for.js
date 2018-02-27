@@ -15,7 +15,7 @@ FieldModelForDirective.prototype = {
         const render = modelController.$render;
 
         // Set up change handlers and update the UI
-        field.on('change', onUpdate);
+        field.watch(onUpdate);
         onUpdate();
 
         modelController.$render = function() {

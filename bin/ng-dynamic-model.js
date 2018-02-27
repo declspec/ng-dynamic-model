@@ -60,354 +60,11 @@
 /******/ 	__webpack_require__.p = "bin/";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 1);
+/******/ 	return __webpack_require__(__webpack_require__.s = 2);
 /******/ })
 /************************************************************************/
 /******/ ([
 /* 0 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var ModelField = exports.ModelField = function () {
-    function ModelField(model, name, value, q) {
-        var _this = this;
-
-        _classCallCheck(this, ModelField);
-
-        this.name = name;
-        this.label = labelise(name);
-
-        this.$$model = model;
-        this.$$value = value;
-        this.$$q = q;
-        this.$$active = true;
-        this.$$dirty = false;
-        this.$$listeners = {};
-        this.$$validationId = 0;
-
-        // Set up an internal watch to propagate external value changes
-        this.watch(function (newValue, oldValue, path) {
-            if (newValue !== _this.$$value) {
-                _this.$$value = newValue;
-                _this.setDirty(true);
-            }
-
-            _this.$emit('change', _this, newValue, oldValue);
-        });
-    }
-
-    _createClass(ModelField, [{
-        key: 'isValid',
-        value: function isValid() {
-            return this.isValidated() && this.$$valid;
-        }
-    }, {
-        key: 'isValidated',
-        value: function isValidated() {
-            return this.$$validated;
-        }
-    }, {
-        key: 'isDirty',
-        value: function isDirty() {
-            return this.$$dirty;
-        }
-    }, {
-        key: 'isActive',
-        value: function isActive() {
-            return this.$$active;
-        }
-    }, {
-        key: 'val',
-        value: function val() {
-            return this.$$value;
-        }
-    }, {
-        key: 'getErrors',
-        value: function getErrors() {
-            return this.$$errors;
-        }
-    }, {
-        key: 'hasValidation',
-        value: function hasValidation() {
-            return this.$$validators && this.$$validators.length || this.$$asyncValidators && this.$$asyncValidators.length;
-        }
-    }, {
-        key: 'setValue',
-        value: function setValue(value) {
-            // clear out the last active value as it will no longer be relevant.
-            if (this.$$lastActiveValue) this.$$lastActiveValue = undefined;
-
-            // This will flow through to the internal watcher.
-            this.$$model.set(this.name, value);
-        }
-    }, {
-        key: 'setDirty',
-        value: function setDirty(dirty) {
-            this.$$dirty = !!dirty;
-            this.$$errors = undefined;
-            this.setValidated(false);
-        }
-    }, {
-        key: 'setValidated',
-        value: function setValidated(validated) {
-            this.$$validated = !!validated;
-        }
-    }, {
-        key: 'setActive',
-        value: function setActive(active) {
-            this.$$active = !!active;
-
-            if (this.$$active && this.$$lastActiveValue) this.setValue(this.$$lastActiveValue);else if (!this.$$active) {
-                // Cache the current value for when/if the field is re-activated.
-                var last = this.value();
-                this.setValue(undefined);
-                this.$$lastActiveValue = last;
-            }
-
-            this.$emit('toggle', this, this.$$active);
-        }
-    }, {
-        key: 'addValidator',
-        value: function addValidator(validator) {
-            if (!this.$$validators) this.$$validators = [];
-            this.$$validators.push(validator);
-            return this;
-        }
-    }, {
-        key: 'addAsyncValidator',
-        value: function addAsyncValidator(validator) {
-            if (!this.$$asyncValidators) this.$$asyncValidators = [];
-            this.$$asyncValidators.push(validator);
-            return this;
-        }
-    }, {
-        key: 'validate',
-        value: function validate() {
-            var _this2 = this;
-
-            var hasAsyncValidators = this.$$asyncValidators && this.$$asyncValidators.length;
-            var hasValidators = this.$$validators && this.$$validators.length;
-
-            var errors = [];
-            var result = !hasValidators || this.$processValidators(appendError);
-
-            if (!result || !hasAsyncValidators) {
-                // Can return early
-                this.$completeValidation(result, errors);
-                return this.$$q.resolve(result);
-            }
-
-            // Run the async validators
-            var ref = ++this.$$validationId;
-
-            if (!this.$$deferredValidation) this.$$deferredValidation = this.$$q.defer();
-
-            this.$processAsyncValidators(appendError).then(function (result) {
-                if (ref === _this2.$$validationId) _this2.$completeValidation(result, errors);
-            }, function (err) {
-                if (ref === _this2.$$validationId) {
-                    var deferred = _this2.$$deferredValidation;
-                    _this2.$$deferredValidation = null;
-                    if (deferred) deferred.reject(err);
-                }
-            });
-
-            return this.$$deferredValidation.promise;
-
-            function appendError(err) {
-                if (typeof err === 'string') err = err.replace('%field%', this.label);
-                errors.push(err);
-            }
-        }
-    }, {
-        key: 'watch',
-        value: function watch(fn) {
-            return this.$$model.watch(this.name, fn);
-        }
-    }, {
-        key: 'on',
-        value: function on(type, fn) {
-            var _this3 = this;
-
-            if (typeof fn !== 'function') throw new TypeError('fn must be a valid function');
-
-            if (!this.$$listeners.hasOwnProperty(type)) this.$$listeners[type] = [fn];else this.$$listeners[type].push(fn);
-
-            return function () {
-                return _this3.off(type, fn);
-            };
-        }
-    }, {
-        key: 'off',
-        value: function off(type, fn) {
-            if (typeof fn !== 'function') throw new TypeError('fn must be a valid function');
-
-            if (listeners && listeners.length > 0) {
-                var idx = listeners.indexOf(fn);
-                if (idx >= 0) listeners.splice(idx, 1);
-            }
-        }
-    }, {
-        key: '$emit',
-        value: function $emit(type) {
-            if (!this.$$listeners.hasOwnProperty(type) || this.$$listeners[type].length === 0) return;
-
-            var listeners = this.$$listeners[type].slice();
-            var argLen = arguments.length;
-            var args = argLen > 4 ? Array.prototype.slice(arguments, 1) : null;
-
-            for (var i = 0, j = listeners.length; i < j; ++i) {
-                var listener = listeners[i];
-
-                switch (argLen) {
-                    case 1:
-                        listener();
-                        break;
-                    case 2:
-                        listener(arguments[1]);
-                        break;
-                    case 3:
-                        listener(arguments[1], arguments[2]);
-                        break;
-                    case 4:
-                        listener(arguments[1], arguments[2], arguments[3]);
-                        break;
-                    default:
-                        listener.apply(undefined, args);
-                        break;
-                }
-            }
-        }
-    }, {
-        key: '$processValidators',
-        value: function $processValidators(appendError) {
-            var validators = this.$$validators;
-
-            for (var i = 0, j = validators.length; i < j; ++i) {
-                if (!validators[i](this, appendError)) return false;
-            }
-
-            return true;
-        }
-    }, {
-        key: '$processAsyncValidators',
-        value: function $processAsyncValidators(appendError) {
-            var _this4 = this;
-
-            var validators = this.$$asyncValidators;
-
-            if (validators && validators.length) {
-                var promises = validators.map(function (v) {
-                    return v(_this4, appendError);
-                });
-                return this.$$q.all(promises).then(function (results) {
-                    return results.every(function (result) {
-                        return result;
-                    });
-                });
-            }
-        }
-    }, {
-        key: '$completeValidation',
-        value: function $completeValidation(valid, errors) {
-            var previous = this.$$valid;
-            var deferred = this.$$deferredValidation;
-
-            this.$$valid = valid;
-            this.$$errors = errors;
-            this.$$deferredValidation = null;
-            this.setValidated(true);
-
-            // Emit the event and then resolve the promise.
-            // This could be a bit racy.
-            this.$emit('validate', this, previous);
-            if (deferred) deferred.resolve(valid);
-        }
-    }]);
-
-    return ModelField;
-}();
-
-function labelise(name) {
-    name = name.substring(name.lastIndexOf('.') + 1);
-
-    var label = name.replace(/([A-Z]+)/g, ' $1').replace(/\W+/g, ' ').replace(/\s{2,}/g, ' ');
-
-    return label[0].toUpperCase() + label.substring(1);
-}
-
-/***/ }),
-/* 1 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _model = __webpack_require__(2);
-
-Object.keys(_model).forEach(function (key) {
-    if (key === "default" || key === "__esModule") return;
-    Object.defineProperty(exports, key, {
-        enumerable: true,
-        get: function get() {
-            return _model[key];
-        }
-    });
-});
-
-var _modelField = __webpack_require__(0);
-
-Object.keys(_modelField).forEach(function (key) {
-    if (key === "default" || key === "__esModule") return;
-    Object.defineProperty(exports, key, {
-        enumerable: true,
-        get: function get() {
-            return _modelField[key];
-        }
-    });
-});
-
-var _modelBuilder = __webpack_require__(7);
-
-var _dynamicModel = __webpack_require__(4);
-
-var _fieldModelFor = __webpack_require__(5);
-
-var _fieldConditionFor = __webpack_require__(8);
-
-function directive(ctor) {
-    var inject = ctor.dependencies || ctor.prototype.dependencies;
-    if (!inject) return function () {
-        return new ctor();
-    };
-
-    var factory = function factory() {
-        return new (Function.prototype.bind.apply(ctor, [null].concat(Array.prototype.slice.call(arguments))))();
-    };
-    factory.$inject = inject;
-    return factory;
-}
-
-var lib = angular.module('ng-dynamic-model', []).service('ModelBuilder', _modelBuilder.ModelBuilder).directive('dynamicModel', directive(_dynamicModel.DynamicModelDirective)).directive('fieldModelFor', directive(_fieldModelFor.FieldModelForDirective)).directive('fieldConditionFor', directive(_fieldConditionFor.FieldConditionForDirective));
-
-exports.default = lib.name;
-
-/***/ }),
-/* 2 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -426,7 +83,7 @@ var _objectPath = __webpack_require__(3);
 
 var objectPath = _interopRequireWildcard(_objectPath);
 
-var _modelField = __webpack_require__(0);
+var _modelField = __webpack_require__(1);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
@@ -509,6 +166,23 @@ var Model = exports.Model = function () {
             var startValue = this.get(path);
             return this.$$fields[path] = new _modelField.ModelField(this, path, startValue);
         }
+    }, {
+        key: '$findChildFields',
+        value: function $findChildFields(path) {
+            var _this2 = this;
+
+            var value = this.get(path, null);
+            var fields = [];
+
+            if (value && (typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object') {
+                Object.keys(value).forEach(function (childProp) {
+                    var lookup = path + '.' + childProp;
+                    if (_this2.$$fields.hasOwnProperty(lookup)) fields.push(_this2.$$fields[lookup]);
+                });
+            }
+
+            return fields;
+        }
     }]);
 
     return Model;
@@ -517,6 +191,222 @@ var Model = exports.Model = function () {
 function defaultComparer(o1, o2) {
     return o1 === o2;
 }
+
+/***/ }),
+/* 1 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var ModelField = exports.ModelField = function () {
+    function ModelField(model, name, value, q) {
+        var _this = this;
+
+        _classCallCheck(this, ModelField);
+
+        this.name = name;
+        this.label = labelise(name);
+
+        this.$$model = model;
+        this.$$value = value;
+        this.$$active = true;
+        this.$$listeners = {};
+
+        // Set up an internal watch to propagate external value changes
+        this.watch(function (newValue, oldValue, path) {
+            if (newValue !== _this.$$value) _this.$$value = newValue;
+
+            _this.$emit('change', _this, newValue, oldValue);
+        });
+    }
+
+    _createClass(ModelField, [{
+        key: 'isDirty',
+        value: function isDirty() {
+            return this.$$dirty;
+        }
+    }, {
+        key: 'isActive',
+        value: function isActive() {
+            return this.$$active;
+        }
+    }, {
+        key: 'value',
+        value: function value() {
+            return this.$$value;
+        }
+    }, {
+        key: 'setValue',
+        value: function setValue(value) {
+            // This will flow through to the internal watcher.
+            this.$$model.set(this.name, value);
+        }
+    }, {
+        key: 'setValidated',
+        value: function setValidated(validated) {
+            this.$$validated = !!validated;
+        }
+    }, {
+        key: 'setActive',
+        value: function setActive(active) {
+            this.$$active = !!active;
+
+            if (this.$$active && this.$$lastActiveValue) {
+                this.setValue(this.$$lastActiveValue);
+            } else if (!this.$$active) {
+                var current = this.value();
+
+                // Cache the current value for when/if the field is re-activated.
+                if (typeof current !== 'undefined') {
+                    this.setValue(undefined);
+                    this.$$lastActiveValue = current;
+                }
+            }
+
+            this.$emit('toggle', this, this.$$active);
+        }
+    }, {
+        key: 'watch',
+        value: function watch(fn) {
+            return this.$$model.watch(this.name, fn);
+        }
+    }, {
+        key: 'on',
+        value: function on(type, fn) {
+            var _this2 = this;
+
+            if (typeof fn !== 'function') throw new TypeError('fn must be a valid function');
+
+            if (!this.$$listeners.hasOwnProperty(type)) this.$$listeners[type] = [];
+
+            this.$$listeners[type].push(fn);
+
+            return function () {
+                return _this2.off(type, fn);
+            };
+        }
+    }, {
+        key: 'off',
+        value: function off(type, fn) {
+            if (typeof fn !== 'function') throw new TypeError('fn must be a valid function');
+
+            if (listeners && listeners.length > 0) {
+                var idx = listeners.indexOf(fn);
+                if (idx >= 0) listeners.splice(idx, 1);
+            }
+        }
+    }, {
+        key: '$emit',
+        value: function $emit(type) {
+            if (!this.$$listeners.hasOwnProperty(type) || this.$$listeners[type].length === 0) return;
+
+            var listeners = this.$$listeners[type].slice();
+            var argLen = arguments.length;
+            var args = argLen > 4 ? Array.prototype.slice(arguments, 1) : null;
+
+            for (var i = 0, j = listeners.length; i < j; ++i) {
+                var listener = listeners[i];
+
+                switch (argLen) {
+                    case 1:
+                        listener();
+                        break;
+                    case 2:
+                        listener(arguments[1]);
+                        break;
+                    case 3:
+                        listener(arguments[1], arguments[2]);
+                        break;
+                    case 4:
+                        listener(arguments[1], arguments[2], arguments[3]);
+                        break;
+                    default:
+                        listener.apply(undefined, args);
+                        break;
+                }
+            }
+        }
+    }]);
+
+    return ModelField;
+}();
+
+function labelise(name) {
+    name = name.substring(name.lastIndexOf('.') + 1);
+
+    var label = name.replace(/([A-Z]+)/g, ' $1').replace(/\W+/g, ' ').replace(/\s{2,}/g, ' ');
+
+    return label[0].toUpperCase() + label.substring(1);
+}
+
+/***/ }),
+/* 2 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _model = __webpack_require__(0);
+
+Object.keys(_model).forEach(function (key) {
+    if (key === "default" || key === "__esModule") return;
+    Object.defineProperty(exports, key, {
+        enumerable: true,
+        get: function get() {
+            return _model[key];
+        }
+    });
+});
+
+var _modelField = __webpack_require__(1);
+
+Object.keys(_modelField).forEach(function (key) {
+    if (key === "default" || key === "__esModule") return;
+    Object.defineProperty(exports, key, {
+        enumerable: true,
+        get: function get() {
+            return _modelField[key];
+        }
+    });
+});
+
+var _modelBuilder = __webpack_require__(4);
+
+var _dynamicModel = __webpack_require__(5);
+
+var _fieldModelFor = __webpack_require__(6);
+
+var _fieldConditionFor = __webpack_require__(7);
+
+function directive(ctor) {
+    var inject = ctor.dependencies || ctor.prototype.dependencies;
+    if (!inject) return function () {
+        return new ctor();
+    };
+
+    var factory = function factory() {
+        return new (Function.prototype.bind.apply(ctor, [null].concat(Array.prototype.slice.call(arguments))))();
+    };
+    factory.$inject = inject;
+    return factory;
+}
+
+var lib = angular.module('ng-dynamic-model', []).service('ModelBuilder', _modelBuilder.ModelBuilder).directive('dynamicModel', directive(_dynamicModel.DynamicModelDirective)).directive('fieldModelFor', directive(_fieldModelFor.FieldModelForDirective)).directive('fieldConditionFor', directive(_fieldConditionFor.FieldConditionForDirective));
+
+exports.default = lib.name;
 
 /***/ }),
 /* 3 */
@@ -829,6 +719,39 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.ModelBuilder = undefined;
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _model = __webpack_require__(0);
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var ModelBuilder = exports.ModelBuilder = function () {
+    function ModelBuilder() {
+        _classCallCheck(this, ModelBuilder);
+    }
+
+    _createClass(ModelBuilder, [{
+        key: 'build',
+        value: function build(initialState) {
+            return new _model.Model(initialState);
+        }
+    }]);
+
+    return ModelBuilder;
+}();
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
 exports.DynamicModelDirective = DynamicModelDirective;
 function DynamicModelDirective() {}
 
@@ -842,7 +765,7 @@ DynamicModelDirective.prototype = {
 };
 
 /***/ }),
-/* 5 */
+/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -868,7 +791,7 @@ FieldModelForDirective.prototype = {
         var render = modelController.$render;
 
         // Set up change handlers and update the UI
-        field.on('change', onUpdate);
+        field.watch(onUpdate);
         onUpdate();
 
         modelController.$render = function () {
@@ -898,41 +821,7 @@ FieldModelForDirective.prototype = {
 };
 
 /***/ }),
-/* 6 */,
 /* 7 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-exports.ModelBuilder = undefined;
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _model = __webpack_require__(2);
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var ModelBuilder = exports.ModelBuilder = function () {
-    function ModelBuilder() {
-        _classCallCheck(this, ModelBuilder);
-    }
-
-    _createClass(ModelBuilder, [{
-        key: 'build',
-        value: function build(initialState) {
-            return new _model.Model(initialState);
-        }
-    }]);
-
-    return ModelBuilder;
-}();
-
-/***/ }),
-/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -943,7 +832,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.FieldConditionForDirective = FieldConditionForDirective;
 
-var _createCondition = __webpack_require__(9);
+var _createCondition = __webpack_require__(8);
 
 function FieldConditionForDirective(parser) {
     this.parser = parser;
@@ -960,7 +849,7 @@ FieldConditionForDirective.prototype = {
         var speed = 0;
 
         var off = (0, _createCondition.createCondition)(attrs['condition'], modelCtrl.model, this.parser, scope, function (result) {
-            field[result ? 'activate' : 'deactivate']();
+            field.setActive(result);
             $element[result ? 'show' : 'hide'](speed);
         });
 
@@ -973,7 +862,7 @@ FieldConditionForDirective.prototype = {
 };
 
 /***/ }),
-/* 9 */
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
