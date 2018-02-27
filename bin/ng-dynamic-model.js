@@ -358,6 +358,7 @@ function labelise(name) {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.util = undefined;
 
 var _model = __webpack_require__(2);
 
@@ -387,8 +388,15 @@ var _ng = __webpack_require__(4);
 
 var _ng2 = _interopRequireDefault(_ng);
 
+var _util = __webpack_require__(7);
+
+var util = _interopRequireWildcard(_util);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+exports.util = util;
 exports.default = _ng2.default;
 
 /***/ }),
