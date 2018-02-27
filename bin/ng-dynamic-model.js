@@ -1349,6 +1349,13 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.createCondition = createCondition;
+
+var _util = __webpack_require__(7);
+
+var util = _interopRequireWildcard(_util);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
 function createCondition(condition, model, parser, locals, callback) {
     if (!callback && typeof locals === 'function') {
         callback = locals;
@@ -1379,7 +1386,8 @@ function createCondition(condition, model, parser, locals, callback) {
     };
 
     function evaluateCondition() {
-        var result = !!expr(locals, model.getState());
+        var context = Object.assign({ '$util': util }, locals);
+        var result = !!expr(context, model.getState());
 
         if (result !== lastResult) {
             lastResult = result;

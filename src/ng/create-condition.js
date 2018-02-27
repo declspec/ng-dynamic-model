@@ -1,3 +1,5 @@
+import * as util from '../util';
+
 export function createCondition(condition, model, parser, locals, callback) {
     if (!callback && typeof(locals) === 'function') {
         callback = locals;
@@ -24,7 +26,8 @@ export function createCondition(condition, model, parser, locals, callback) {
     return () => unwatchers.forEach(unwatch => unwatch());
 
     function evaluateCondition() {
-        const result = !!expr(locals, model.getState());
+        const context = Object.assign({ '$util' : util }, locals);
+        const result = !!expr(context, model.getState());
 
         if (result !== lastResult) {
             lastResult = result;
