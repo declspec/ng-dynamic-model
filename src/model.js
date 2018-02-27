@@ -1,13 +1,21 @@
 import * as objectPath from 'object-path';
 import { ModelField } from './model-field';
 
+const ValidationTrigger = {
+    Manual: 0,
+    Change: 1
+};
+
+export { ValidationTrigger };
+
 export class Model {
-    constructor(initialState) {
+    constructor(q, initialState) {
         this.$$state = initialState || {};
 
         if (typeof(this.$$state) !== 'object')
             throw new TypeError('initialState must be a valid object');
 
+        this.$$q = q;
         this.$$subscribers = [];
         this.$$fields = {};
     }
@@ -65,7 +73,29 @@ export class Model {
             return this.$$fields[path];
 
         const startValue = this.get(path);
-        return this.$$fields[path] = new ModelField(this, path, startValue);
+        const field = new ModelField(this.$$q, this, path, startValue);
+
+        // Use `watch` over `on('change')` to avoid emitting events
+        // inside other events (causing event ordering issues).
+        if (this.$$validationTrigger === ValidationTrigger.Change)
+            field.watch(() => field.hasValidation() && field.validate());
+
+        return (this.$$fields[path] = field);
+    }
+
+    validate() {
+        const promises = Object.keys(this.$$fields).map(path => {
+            const field = this.$$fields[path];
+            return field.hasValidation() && field.isActive()
+                ? (field.isValidated() ? field.isValid() : field.validate())
+                : true;
+        });
+
+        return this.$$q.all(promises).then(results => results.every(r => r));
+    }
+
+    setValidationTrigger(trigger) {
+        this.$$validationTrigger = trigger;
     }
 
     $findChildFields(path) {
@@ -81,6 +111,19 @@ export class Model {
         }
 
         return fields;
+    }
+
+    $findParentField(path) {
+        let parentPath = path,
+            dot = -1;
+
+        while((dot = parentPath.lastIndexOf('.')) >= 0) {
+            parentPath = parentPath.substring(0, dot);
+            if (this.$$fields.hasOwnProperty(parentPath))
+                return this.$$fields[parentPath];
+        }
+
+        return null;
     }
 }
 
