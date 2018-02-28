@@ -1,19 +1,19 @@
 const path = require('path');
 const webpack = require('webpack');
-
-console.log(path.resolve('bin'));
-const LIBRARY_NAME = 'ng-dynamic-model';
+const LibraryName = 'ng-dynamic-model';
 
 module.exports = {
     entry: {
-        [LIBRARY_NAME]: './index.js',
-        [`${LIBRARY_NAME}.min`]: './index.js'
+        [LibraryName]: './src/index.js',
+        [`${LibraryName}.min`]: './index.js'
     },
 
     output: {
         path: path.resolve('./bin'),
         publicPath: 'bin/',
-        filename: '[name].js'
+        filename: '[name].js',
+        library: LibraryName,
+        libraryTarget: 'umd'
     },
 
     resolve: {
