@@ -20,6 +20,7 @@ FieldValidationMessageForDirective.prototype = {
         ];
 
         this.$onDestroy = () => unbinders.forEach(fn => fn());
+        update(true);
     
         function update(valid, error) {
             $element.text(valid ? '' : error);

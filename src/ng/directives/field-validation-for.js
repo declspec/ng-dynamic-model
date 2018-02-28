@@ -44,7 +44,7 @@ FieldValidationForDirective.prototype = {
             const valid = fields.every(f => f.isValid());
 
             $element[validated && valid ? 'addClass' : 'removeClass'](validClass);
-            $element[validated && !valid ? 'removeClass' : 'addClass'](invalidClass);
+            $element[validated && !valid ? 'addClass' : 'removeClass'](invalidClass);
         }
     },
 
@@ -70,13 +70,13 @@ function createValidator(metadata, factory) {
 
     if (typeof(metadata) === 'string')
         validator = factory.get(metadata);
-    else if (obj && typeof(obj) === 'object' && obj.hasOwnProperty('name')) {
+    else if (metadata && typeof(metadata) === 'object' && metadata.hasOwnProperty('name')) {
         validator = factory.get(metadata.name);
-        args = obj;
+        args = metadata;
     }
 
     if (!validator)
-        throw new Error(`field-validation-for: unknown validator encountered (${JSON.stringify(obj)})`);
+        throw new Error(`field-validation-for: unknown validator encountered (${JSON.stringify(metadata)})`);
     
     const fn = (field, addError) => validator.fn.call(validator, field, addError, args);
     fn.async = validator.async;

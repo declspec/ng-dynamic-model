@@ -19,7 +19,7 @@ FieldMultiModelForDirective.prototype = {
             ? this.parse(attrs['ngValue'])(scope, modelCtrl.model.getState())
             : attrs['value'];
 
-        $element.on('change', () => {
+        $element.on('change', function() {
             if (allowMultiple || this.checked)
                 scope.$apply(processChange);
         }); 
