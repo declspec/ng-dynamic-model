@@ -12,8 +12,9 @@
             var app = angular.module('test-app', [ 'ng-dynamic-model' ]);
 
             app.controller('TestController', [ '$scope', 'ModelBuilder', function($scope, modelBuilder) {
-                $scope.model = modelBuilder.build();
-                $scope.model.setValidationTrigger(1);
+                $scope.model=  modelBuilder.build();
+
+                let field = $scope.model.field('array');
 
                 $scope.submit = function() {
                     console.log('submitting');
@@ -21,26 +22,54 @@
                         console.log('submitted', valid);
                     });
                 }
+
+                $scope.add = function() {
+                    const value = field.value() || [];
+                    value.push({});
+                    field.setValue(value);   
+                }
+
+                $scope.remove = function(index) {
+                    const value = field.value();
+                    if (value) {
+                        value.splice(index, 1);
+                        field.setValue(value);
+                    }
+                }
             }]);
         </script>
     </head>
 
-    <body ng-app="test-app" ng-controller="TestController" id="content">
+    <body ng-app="test-app" ng-controller="TestController" id="content" style="font-family:Arial, Helvetica, sans-serif">
+        <button type="button" ng-click="add()">Add</button>
         <form dynamic-model="::model">
-            <input type="text" ng-model="top" field-model-for="top" />
-            <input type="text" ng-model="next" field-model-for="next" />
 
-            <div field-condition-for="nested" condition="[top] === 'required'">
-                <div field-validation-for="nested.test1" validators="['required']">
-                    <span field-validation-message-for="nested.test1"></span>
-                    <input type="text" ng-model="test1" field-model-for="nested.test1" />
+            <div field-dynamic-model-for-each="array">
+                <div field-validation-for="test" validators="['required']">
+                    {{$index}}. <input type="text" ng-model="test" field-model-for="test" /><button ng-click="remove($index)">Remove</button>
+                    <br/>
+                    <span field-validation-message-for="test"></span>
                 </div>
 
-                <div field-condition-for="nested.test2" condition="[next] === 'hello'">
-                    <input type="text" ng-model="test2" field-model-for="nested.test2" />
+                <span readonly-field-for="test" expr="'value: ' + test"></span>
+                <hr/>
+            </div>
+
+            <div>
+                <input type="text" ng-model="top" field-model-for="top" />
+                <input type="text" ng-model="next" field-model-for="next" />
+
+                <div field-condition-for="nested" condition="[top] === 'required'">
+                    <div field-validation-for="nested.test1" validators="['required']">
+                        <span field-validation-message-for="nested.test1"></span>
+                        <input type="text" ng-model="test1" field-model-for="nested.test1" />
+                    </div>
+
+                    <div field-condition-for="nested.test2" condition="[next] === 'hello'">
+                        <input type="text" ng-model="test2" field-model-for="nested.test2" />
+                    </div>
                 </div>
             </div>
-            
             <button type="button" ng-click="model.set('nested', {})">Reset</button>
             <button type="button" ng-click="submit()">Validate</button>
 

@@ -1,8 +1,18 @@
+import { getType } from './util';
+
 const ValidationState = {
     Valid: 0,
     Invalid: 1,
     Unknown: 2
 };
+
+function fieldValueComparer(v1, v2) {
+    if (v1 !== v2)
+        return false;
+
+    let type = getType(v1)
+    return type !== 'object' && type !== 'array';
+}
 
 export class ModelField {
     constructor(q, model, name, value) {
@@ -147,8 +157,8 @@ export class ModelField {
         }
     }
 
-    watch(fn) {
-        return this.$$model.watch(this.name, fn);
+    watch(fn, comparer) {
+        return this.$$model.watch(this.name, fn, comparer || fieldValueComparer);
     }
 
     on(type, fn) {

@@ -8,7 +8,8 @@ import { FieldModelForDirective } from './directives/field-model-for';
 import { FieldMultiModelForDirective } from './directives/field-multi-model-for';
 import { FieldConditionForDirective } from './directives/field-condition-for';
 import { FieldConditionDirective } from './directives/field-condition';
-
+import { ReadonlyFieldForDirective } from './directives/readonly-field-for';
+import { PreFieldDynamicModelForEachDirective, FieldDynamicModelForEachDirective } from './directives/field-dynamic-model-for-each';
 import { FieldValidationForDirective } from './directives/field-validation-for';
 import { FieldValidationMessageForDirective } from './directives/field-validation-message-for';
 
@@ -35,6 +36,9 @@ const lib = angular.module('ng-dynamic-model', [])
     .directive('fieldConditionFor', directive(FieldConditionForDirective))
     .directive('fieldCondition', directive(FieldConditionDirective))
     .directive('fieldValidationFor', directive(FieldValidationForDirective))
-    .directive('fieldValidationMessageFor', directive(FieldValidationMessageForDirective));
+    .directive('fieldValidationMessageFor', directive(FieldValidationMessageForDirective))
+    .directive('readonlyFieldFor', directive(ReadonlyFieldForDirective))
+    .directive('fieldDynamicModelForEach', FieldDynamicModelForEachDirective)
+    .directive('fieldDynamicModelForEach', PreFieldDynamicModelForEachDirective);
 
 export default lib.name;

@@ -434,8 +434,11 @@ function defaultComparer(o1, o2) {
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.ModelField = undefined;
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _util = __webpack_require__(0);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -444,6 +447,13 @@ var ValidationState = {
     Invalid: 1,
     Unknown: 2
 };
+
+function fieldValueComparer(v1, v2) {
+    if (v1 !== v2) return false;
+
+    var type = (0, _util.getType)(v1);
+    return type !== 'object' && type !== 'array';
+}
 
 var ModelField = exports.ModelField = function () {
     function ModelField(q, model, name, value) {
@@ -599,8 +609,8 @@ var ModelField = exports.ModelField = function () {
         }
     }, {
         key: 'watch',
-        value: function watch(fn) {
-            return this.$$model.watch(this.name, fn);
+        value: function watch(fn, comparer) {
+            return this.$$model.watch(this.name, fn, comparer || fieldValueComparer);
         }
     }, {
         key: 'on',
@@ -1146,9 +1156,13 @@ var _fieldConditionFor = __webpack_require__(14);
 
 var _fieldCondition = __webpack_require__(15);
 
-var _fieldValidationFor = __webpack_require__(16);
+var _readonlyFieldFor = __webpack_require__(22);
 
-var _fieldValidationMessageFor = __webpack_require__(17);
+var _fieldDynamicModelForEach = __webpack_require__(16);
+
+var _fieldValidationFor = __webpack_require__(17);
+
+var _fieldValidationMessageFor = __webpack_require__(18);
 
 function directive(ctor) {
     var inject = ctor.dependencies || ctor.prototype.dependencies;
@@ -1163,7 +1177,7 @@ function directive(ctor) {
     return factory;
 }
 
-var lib = angular.module('ng-dynamic-model', []).config(_config.ValidationConfig).provider('ValidatorFactory', _validatorFactory.ValidatorFactoryProvider).service('ModelBuilder', _modelBuilder.ModelBuilder).directive('dynamicModel', directive(_dynamicModel.DynamicModelDirective)).directive('fieldModelFor', directive(_fieldModelFor.FieldModelForDirective)).directive('fieldMultiModelFor', directive(_fieldMultiModelFor.FieldMultiModelForDirective)).directive('fieldConditionFor', directive(_fieldConditionFor.FieldConditionForDirective)).directive('fieldCondition', directive(_fieldCondition.FieldConditionDirective)).directive('fieldValidationFor', directive(_fieldValidationFor.FieldValidationForDirective)).directive('fieldValidationMessageFor', directive(_fieldValidationMessageFor.FieldValidationMessageForDirective));
+var lib = angular.module('ng-dynamic-model', []).config(_config.ValidationConfig).provider('ValidatorFactory', _validatorFactory.ValidatorFactoryProvider).service('ModelBuilder', _modelBuilder.ModelBuilder).directive('dynamicModel', directive(_dynamicModel.DynamicModelDirective)).directive('fieldModelFor', directive(_fieldModelFor.FieldModelForDirective)).directive('fieldMultiModelFor', directive(_fieldMultiModelFor.FieldMultiModelForDirective)).directive('fieldConditionFor', directive(_fieldConditionFor.FieldConditionForDirective)).directive('fieldCondition', directive(_fieldCondition.FieldConditionDirective)).directive('fieldValidationFor', directive(_fieldValidationFor.FieldValidationForDirective)).directive('fieldValidationMessageFor', directive(_fieldValidationMessageFor.FieldValidationMessageForDirective)).directive('readonlyFieldFor', directive(_readonlyFieldFor.ReadonlyFieldForDirective)).directive('fieldDynamicModelForEach', _fieldDynamicModelForEach.FieldDynamicModelForEachDirective).directive('fieldDynamicModelForEach', _fieldDynamicModelForEach.PreFieldDynamicModelForEachDirective);
 
 exports.default = lib.name;
 
@@ -1541,6 +1555,166 @@ FieldConditionDirective.prototype = {
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.FieldDynamicModelForEachDirective = FieldDynamicModelForEachDirective;
+exports.PreFieldDynamicModelForEachDirective = PreFieldDynamicModelForEachDirective;
+var ExpressionPattern = /^\s*((?:[a-z_$][a-z0-9_$]*)(?:\.[a-z_$][a-z0-9_$]*)*)(?:\s+track\s+by\s+([\s\S]+))?\s*$/i;
+var RemovedFlag = '$$removed';
+
+function findBlockIndexByValue(blocks, value) {
+    for (var i = 0, j = blocks.length; i < j; ++i) {
+        if (blocks[i].value === value) return i;
+    }
+
+    return -1;
+}
+
+FieldDynamicModelForEachDirective.$inject = ['$q', '$animate', 'ModelBuilder'];
+
+function FieldDynamicModelForEachDirective(q, animate, modelBuilder) {
+    return {
+        restrict: 'A',
+        transclude: 'element',
+        priority: 1000,
+        terminal: true,
+        dependencies: ['$animate', '$compile', 'ModelBuilder'],
+        require: '^^dynamicModel',
+
+        compile: function compile($element, attrs) {
+            if (!attrs['fieldDynamicModelForEach']) throw new TypeError('field-dynamic-model-for-each: missing required attribute "field-dynamic-model-for-each"');
+
+            var expression = attrs['fieldDynamicModelForEach'];
+            var match = expression.match(ExpressionPattern);
+            var fieldName = match[1];
+
+            return function (scope, $element, attrs, ctrl, transclude) {
+                var field = ctrl.model.field(fieldName);
+                var lastBlocks = [];
+
+                field.addAsyncValidator(function (f, addError) {
+                    return q.all(lastBlocks.map(function (b) {
+                        return b.model.validate();
+                    })).then(function (results) {
+                        return results.every(function (r) {
+                            return r;
+                        });
+                    });
+                });
+
+                field.watch(onFieldUpdated);
+                onFieldUpdated(field.value());
+
+                function onFieldUpdated(newValue) {
+                    var nextBlocks = [];
+
+                    if (Array.isArray(newValue)) {
+                        for (var i = 0, j = newValue.length; i < j; ++i) {
+                            var value = newValue[i];
+                            var idx = findBlockIndexByValue(lastBlocks, value);
+
+                            if (idx >= 0) {
+                                // Existing value
+                                nextBlocks.push(lastBlocks[idx]);
+                                lastBlocks.splice(idx, 1);
+                            } else {
+                                // Never before seen value
+                                var block = { value: value, scope: undefined, clone: undefined, model: createModel(field, value) };
+                                nextBlocks.push(block);
+                            }
+                        }
+                    }
+
+                    // Remove blocks that weren't transferred
+                    for (var _i = 0, _j = lastBlocks.length; _i < _j; ++_i) {
+                        var _block = lastBlocks[_i];
+                        animate.leave(_block.clone);
+
+                        if (_block.clone[0].parentNode) _block.clone[0][RemovedFlag] = true;
+
+                        _block.scope.$destroy();
+                    }
+
+                    var previousNode = $element[0];
+
+                    var _loop = function _loop(_i2, _j2) {
+                        var block = nextBlocks[_i2];
+
+                        if (!block.scope) {
+                            // Brand new block
+                            transclude(function (clone, scope) {
+                                block.scope = scope;
+                                animate.enter(clone, null, previousNode);
+                                previousNode = clone[0];
+                                block.clone = clone;
+                                updateBlock(block, _i2, nextBlocks.length);
+                            });
+                        } else {
+                            // Re-use the element
+                            var nextNode = previousNode;
+
+                            do {
+                                nextNode = previousNode.nextSibling;
+                            } while (nextNode && nextNode[RemovedFlag]);
+
+                            if (block.clone[0] !== nextNode) {
+                                // Order for this node doesn't match
+                                animate.move(block.clone[0], null, previousNode);
+                            }
+
+                            previousNode = block.clone[0];
+                            updateBlock(block, _i2, nextBlocks.length);
+                        }
+                    };
+
+                    for (var _i2 = 0, _j2 = nextBlocks.length; _i2 < _j2; ++_i2) {
+                        _loop(_i2, _j2);
+                    }
+
+                    lastBlocks = nextBlocks;
+                }
+            };
+
+            function updateBlock(block, index, totalBlocks) {
+                block.scope.$model = block.model;
+                block.scope.$index = index;
+            }
+
+            function createModel(parentField, state) {
+                var model = modelBuilder.build(state);
+                model.subscribe(function () {
+                    return parentField.setDirty(true);
+                });
+                return model;
+            }
+        }
+    };
+}
+
+function PreFieldDynamicModelForEachDirective() {
+    return {
+        restrict: 'A',
+        priority: 1001,
+        compile: function compile($element, attrs) {
+            var wrapper = angular.element('<div dynamic-model="$model"></div>');
+            var wrapperNode = wrapper[0];
+            var parentNode = $element[0];
+
+            while (parentNode.childNodes.length) {
+                wrapperNode.appendChild(parentNode.childNodes[0]);
+            }$element.append(wrapper);
+        }
+    };
+}
+
+/***/ }),
+/* 17 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -1640,7 +1814,7 @@ function createValidator(metadata, factory) {
 }
 
 /***/ }),
-/* 17 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1681,6 +1855,55 @@ FieldValidationMessageForDirective.prototype = {
         function update(valid, error) {
             $element.text(valid ? '' : error);
             $element[!valid && error ? 'show' : 'hide']();
+        }
+    }
+};
+
+/***/ }),
+/* 19 */,
+/* 20 */,
+/* 21 */,
+/* 22 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.ReadonlyFieldForDirective = ReadonlyFieldForDirective;
+
+var _objectPath = __webpack_require__(5);
+
+function ReadonlyFieldForDirective(parse) {
+    this.parse = parse;
+}
+
+ReadonlyFieldForDirective.prototype = {
+    restrict: 'A',
+    require: '^^dynamicModel',
+    dependencies: ['$parse'],
+    link: function link(scope, $element, attrs, modelCtrl) {
+        if (!attrs['readonlyFieldFor']) throw new TypeError('readonly-field-for: missing required attribute "readonly-field-for"');
+
+        var model = modelCtrl.model;
+        var field = model.field(attrs['readonlyFieldFor']);
+
+        var locals = void 0,
+            expr = void 0;
+
+        if (attrs['expr']) {
+            expr = this.parse(attrs['expr']);
+            locals = {};
+        }
+
+        field.on('change', onUpdated);
+        onUpdated(field);
+
+        function onUpdated(f) {
+            var val = expr ? expr(scope, model.getState()) : f.value();
+            $element.html(val);
         }
     }
 };
