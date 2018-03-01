@@ -54,7 +54,14 @@ export class Model {
     }
 
     set(path, value) {
-        objectPath.set(this.$$state, path, value);
+        if (typeof(path) === 'string')
+            objectPath.set(this.$$state, path, value);
+        else {
+            // Update the entire state when no path is specified.
+            this.$$state = path;
+        }
+    
+        // Invoke all the subscribers
         const subscribers = this.$$subscribers.slice();
 
         for(var i = 0, j = subscribers.length; i < j; ++i) {

@@ -334,7 +334,12 @@ var Model = exports.Model = function () {
     }, {
         key: 'set',
         value: function set(path, value) {
-            objectPath.set(this.$$state, path, value);
+            if (typeof path === 'string') objectPath.set(this.$$state, path, value);else {
+                // Update the entire state when no path is specified.
+                this.$$state = path;
+            }
+
+            // Invoke all the subscribers
             var subscribers = this.$$subscribers.slice();
 
             for (var i = 0, j = subscribers.length; i < j; ++i) {
