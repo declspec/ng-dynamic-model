@@ -1,4 +1,4 @@
-const ExpressionPattern = /^\s*((?:[a-z_$][a-z0-9_$]*)(?:\.[a-z_$][a-z0-9_$]*)*)(?:\s+track\s+by\s+([\s\S]+))?\s*$/i
+const ExpressionPattern = /^\s*((?:[a-z_$][a-z0-9_$]*)(?:\.[a-z_$][a-z0-9_$]*)*)\s*$/i
 const RemovedFlag = '$$removed';
 
 function findBlockIndexByValue(blocks, value) {
@@ -24,13 +24,16 @@ export function FieldDynamicModelForEachDirective(q, animate, modelBuilder) {
         compile: function($element, attrs) {
             if (!attrs['fieldDynamicModelForEach'])
                 throw new TypeError('field-dynamic-model-for-each: missing required attribute "field-dynamic-model-for-each"');
-    
-            const expression = attrs['fieldDynamicModelForEach'];
-            const match = expression.match(ExpressionPattern);
-            const fieldName = match[1];
 
             return function(scope, $element, attrs, ctrl, transclude) {
-                const field = ctrl.model.field(fieldName);
+                const expression = attrs['fieldDynamicModelForEach'];
+                const match = expression.match(ExpressionPattern);
+
+                if (match === null)
+                    throw new TypeError(`field-dynamic-model-for=each: "${expression}" is not a valid field name`);
+
+                const field = ctrl.model.field(match[1]);
+                
                 let lastBlocks = [];
     
                 field.addAsyncValidator((f, addError) => {
@@ -113,6 +116,7 @@ export function FieldDynamicModelForEachDirective(q, animate, modelBuilder) {
             function updateBlock(block, index, totalBlocks) {
                 block.scope.$model = block.model;
                 block.scope.$index = index;
+                block.scope.$count = totalBlocks;
             }
 
             function createModel(parentField, state) {
