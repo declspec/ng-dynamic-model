@@ -70,7 +70,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/ 	__webpack_require__.p = "bin/";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 4);
+/******/ 	return __webpack_require__(__webpack_require__.s = 5);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -261,11 +261,11 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _objectPath = __webpack_require__(5);
+var _objectPath = __webpack_require__(2);
 
 var objectPath = _interopRequireWildcard(_objectPath);
 
-var _modelField = __webpack_require__(2);
+var _modelField = __webpack_require__(3);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
@@ -431,410 +431,6 @@ function defaultComparer(o1, o2) {
 
 /***/ }),
 /* 2 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-exports.ModelField = undefined;
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _util = __webpack_require__(0);
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var ValidationState = {
-    Valid: 0,
-    Invalid: 1,
-    Unknown: 2
-};
-
-function fieldValueComparer(v1, v2) {
-    if (v1 !== v2) return false;
-
-    var type = (0, _util.getType)(v1);
-    return type !== 'object' && type !== 'array';
-}
-
-var ModelField = exports.ModelField = function () {
-    function ModelField(q, model, name, value) {
-        var _this = this;
-
-        _classCallCheck(this, ModelField);
-
-        this.name = name;
-        this.label = labelise(name);
-
-        // Private fields
-        this.$$model = model;
-        this.$$value = value;
-        this.$$active = true;
-        this.$$q = q;
-        this.$$listeners = {};
-        this.$$validationState = ValidationState.Unknown;
-        this.$$validationRef = 0;
-
-        // Set up an internal watch to propagate external value changes
-        this.watch(function (newValue, oldValue, path) {
-            if (newValue !== _this.$$value) _this.$$value = newValue;
-
-            _this.setDirty(true);
-            _this.$emit('change', _this, newValue, oldValue);
-        });
-    }
-
-    _createClass(ModelField, [{
-        key: 'invalidate',
-        value: function invalidate() {
-            this.$$validationState = ValidationState.Unknown;
-        }
-    }, {
-        key: 'isValid',
-        value: function isValid() {
-            return this.$$validationState === ValidationState.Valid;
-        }
-    }, {
-        key: 'isValidated',
-        value: function isValidated() {
-            return this.$$validationState !== ValidationState.Unknown;
-        }
-    }, {
-        key: 'isDirty',
-        value: function isDirty() {
-            return this.$$dirty;
-        }
-    }, {
-        key: 'isActive',
-        value: function isActive() {
-            if (!this.$$active) return false;
-
-            var parent = this.$$model.$findParentField(this.name);
-            return parent === null || parent.isActive();
-        }
-    }, {
-        key: 'hasValidation',
-        value: function hasValidation() {
-            return this.$$validators && this.$$validators.length || this.$$asyncValidators && this.$$asyncValidators.length;
-        }
-    }, {
-        key: 'value',
-        value: function value() {
-            return this.$$value;
-        }
-    }, {
-        key: 'setValue',
-        value: function setValue(value) {
-            // This will flow through to the internal watcher.
-            this.$$model.set(this.name, value);
-        }
-    }, {
-        key: 'setDirty',
-        value: function setDirty(dirty) {
-            this.$$dirty = !!dirty;
-            this.invalidate();
-        }
-    }, {
-        key: 'setActive',
-        value: function setActive(active) {
-            this.$$active = !!active;
-
-            if (this.$$active && this.$$lastActiveValue) {
-                this.setValue(this.$$lastActiveValue);
-            } else if (!this.$$active) {
-                var current = this.value();
-
-                // Cache the current value for when/if the field is re-activated.
-                if (typeof current !== 'undefined') {
-                    this.setValue(undefined);
-                    this.$$lastActiveValue = current;
-                }
-            }
-
-            this.$emit('toggle', this, this.$$active);
-        }
-    }, {
-        key: 'addValidator',
-        value: function addValidator(validator) {
-            if (typeof validator !== 'function') throw new TypeError('validator must be a valid function');
-
-            if (!this.$$validators) this.$$validators = [];
-
-            this.$$validators.push(validator);
-            return this;
-        }
-    }, {
-        key: 'addAsyncValidator',
-        value: function addAsyncValidator(validator) {
-            if (typeof validator !== 'function') throw new TypeError('validator must be a valid function');
-
-            if (!this.$$asyncValidators) this.$$asyncValidators = [];
-
-            this.$$asyncValidators.push(validator);
-            return this;
-        }
-    }, {
-        key: 'validate',
-        value: function validate(newValue) {
-            var _this2 = this;
-
-            var errors = [];
-            var result = this.$processValidators(addError);
-
-            // Can we exit early?
-            if (!result || !this.$$asyncValidators || !this.$$asyncValidators.length) {
-                this.$completeValidation(result, errors);
-                return this.$$q.resolve(result);
-            }
-
-            // Run the async validators
-            var ref = ++this.$$validationRef;
-            this.$$validationSate = ValidationState.Unknown;
-
-            if (!this.$$deferredValidation) this.$$deferredValidation = this.$$q.defer();
-
-            this.$processAsyncValidators(addError).then(function (result) {
-                if (ref === _this2.$$validationRef) _this2.$completeValidation(result, errors);
-            }, function (err) {
-                if (ref === _this2.$$validationRef && _this2.$$deferredValidation) {
-                    var deferred = _this2.$$deferredValidation;
-                    _this2.$$deferredValidation = null;
-                    deferred.reject(err);
-                }
-            });
-
-            return this.$$deferredValidation.promise;
-
-            function addError(err) {
-                errors.push(err);
-            }
-        }
-    }, {
-        key: 'watch',
-        value: function watch(fn, comparer) {
-            return this.$$model.watch(this.name, fn, comparer || fieldValueComparer);
-        }
-    }, {
-        key: 'on',
-        value: function on(type, fn) {
-            var _this3 = this;
-
-            if (typeof fn !== 'function') throw new TypeError('fn must be a valid function');
-
-            if (!this.$$listeners.hasOwnProperty(type)) this.$$listeners[type] = [];
-
-            this.$$listeners[type].push(fn);
-
-            return function () {
-                return _this3.off(type, fn);
-            };
-        }
-    }, {
-        key: 'off',
-        value: function off(type, fn) {
-            if (typeof fn !== 'function') throw new TypeError('fn must be a valid function');
-
-            if (listeners && listeners.length > 0) {
-                var idx = listeners.indexOf(fn);
-                if (idx >= 0) listeners.splice(idx, 1);
-            }
-        }
-    }, {
-        key: '$emit',
-        value: function $emit(type) {
-            if (!this.$$listeners.hasOwnProperty(type) || this.$$listeners[type].length === 0) return;
-
-            var listeners = this.$$listeners[type].slice();
-            var argLen = arguments.length;
-            var args = argLen > 4 ? Array.prototype.slice(arguments, 1) : null;
-
-            for (var i = 0, j = listeners.length; i < j; ++i) {
-                var listener = listeners[i];
-
-                switch (argLen) {
-                    case 1:
-                        listener();
-                        break;
-                    case 2:
-                        listener(arguments[1]);
-                        break;
-                    case 3:
-                        listener(arguments[1], arguments[2]);
-                        break;
-                    case 4:
-                        listener(arguments[1], arguments[2], arguments[3]);
-                        break;
-                    default:
-                        listener.apply(undefined, args);
-                        break;
-                }
-            }
-        }
-    }, {
-        key: '$completeValidation',
-        value: function $completeValidation(result, errors) {
-            var deferred = this.$$deferredValidation;
-            if (deferred) this.$$deferredValidation = null;
-
-            this.$$validationState = result ? ValidationState.Valid : ValidationState.Invalid;
-            this.$emit('validate', this, result, errors);
-
-            if (deferred) deferred.resolve(result);
-        }
-    }, {
-        key: '$processValidators',
-        value: function $processValidators(addError) {
-            var validators = this.$$validators;
-
-            if (validators) {
-                for (var i = 0, j = validators.length; i < j; ++i) {
-                    if (!validators[i](this, addError)) return false;
-                }
-            }
-
-            return true;
-        }
-    }, {
-        key: '$processAsyncValidators',
-        value: function $processAsyncValidators(addError) {
-            var _this4 = this;
-
-            var promises = this.$$asyncValidators.map(function (v) {
-                return v(_this4, addError);
-            });
-            return this.$$q.all(promises).then(function (results) {
-                return results.every(function (result) {
-                    return result;
-                });
-            });
-        }
-    }]);
-
-    return ModelField;
-}();
-
-function labelise(name) {
-    name = name.substring(name.lastIndexOf('.') + 1);
-
-    var label = name.replace(/([A-Z]+)/g, ' $1').replace(/\W+/g, ' ').replace(/\s{2,}/g, ' ');
-
-    return label[0].toUpperCase() + label.substring(1);
-}
-
-/***/ }),
-/* 3 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-exports.createCondition = createCondition;
-
-var _util = __webpack_require__(0);
-
-var util = _interopRequireWildcard(_util);
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
-
-function createCondition(condition, model, parser, locals, callback) {
-    if (!callback && typeof locals === 'function') {
-        callback = locals;
-        locals = null;
-    }
-
-    var dependentFields = [];
-
-    condition = condition.replace(/\[([a-zA-Z\$_][\w.]+)\]/g, function (m, fieldName) {
-        if (dependentFields.indexOf(fieldName) < 0) dependentFields.push(fieldName);
-        return fieldName;
-    });
-
-    if (dependentFields.length === 0) console.warn('warning: createCondition: conditional expression does not contain any field references and will only be evaluated once');
-
-    var expr = parser(condition);
-    var lastResult = void 0;
-
-    evaluateCondition();
-    var unwatchers = dependentFields.map(function (name) {
-        return model.watch(name, evaluateCondition);
-    });
-
-    return function () {
-        return unwatchers.forEach(function (unwatch) {
-            return unwatch();
-        });
-    };
-
-    function evaluateCondition() {
-        var context = Object.assign({ '$util': util }, locals);
-        var result = !!expr(context, model.getState());
-
-        if (result !== lastResult) {
-            lastResult = result;
-            callback(lastResult);
-        }
-    }
-}
-
-/***/ }),
-/* 4 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.util = undefined;
-
-var _model = __webpack_require__(1);
-
-Object.keys(_model).forEach(function (key) {
-  if (key === "default" || key === "__esModule") return;
-  Object.defineProperty(exports, key, {
-    enumerable: true,
-    get: function get() {
-      return _model[key];
-    }
-  });
-});
-
-var _modelField = __webpack_require__(2);
-
-Object.keys(_modelField).forEach(function (key) {
-  if (key === "default" || key === "__esModule") return;
-  Object.defineProperty(exports, key, {
-    enumerable: true,
-    get: function get() {
-      return _modelField[key];
-    }
-  });
-});
-
-var _ng = __webpack_require__(6);
-
-var _ng2 = _interopRequireDefault(_ng);
-
-var _util = __webpack_require__(0);
-
-var util = _interopRequireWildcard(_util);
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-exports.util = util;
-exports.default = _ng2.default;
-
-/***/ }),
-/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function (root, factory){
@@ -1135,6 +731,410 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
 
 
 /***/ }),
+/* 3 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.ModelField = undefined;
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _util = __webpack_require__(0);
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var ValidationState = {
+    Valid: 0,
+    Invalid: 1,
+    Unknown: 2
+};
+
+function fieldValueComparer(v1, v2) {
+    if (v1 !== v2) return false;
+
+    var type = (0, _util.getType)(v1);
+    return type !== 'object' && type !== 'array';
+}
+
+var ModelField = exports.ModelField = function () {
+    function ModelField(q, model, name, value) {
+        var _this = this;
+
+        _classCallCheck(this, ModelField);
+
+        this.name = name;
+        this.label = labelise(name);
+
+        // Private fields
+        this.$$model = model;
+        this.$$value = value;
+        this.$$active = true;
+        this.$$q = q;
+        this.$$listeners = {};
+        this.$$validationState = ValidationState.Unknown;
+        this.$$validationRef = 0;
+
+        // Set up an internal watch to propagate external value changes
+        this.watch(function (newValue, oldValue, path) {
+            if (newValue !== _this.$$value) _this.$$value = newValue;
+
+            _this.setDirty(true);
+            _this.$emit('change', _this, newValue, oldValue);
+        });
+    }
+
+    _createClass(ModelField, [{
+        key: 'invalidate',
+        value: function invalidate() {
+            this.$$validationState = ValidationState.Unknown;
+        }
+    }, {
+        key: 'isValid',
+        value: function isValid() {
+            return this.$$validationState === ValidationState.Valid;
+        }
+    }, {
+        key: 'isValidated',
+        value: function isValidated() {
+            return this.$$validationState !== ValidationState.Unknown;
+        }
+    }, {
+        key: 'isDirty',
+        value: function isDirty() {
+            return this.$$dirty;
+        }
+    }, {
+        key: 'isActive',
+        value: function isActive() {
+            if (!this.$$active) return false;
+
+            var parent = this.$$model.$findParentField(this.name);
+            return parent === null || parent.isActive();
+        }
+    }, {
+        key: 'hasValidation',
+        value: function hasValidation() {
+            return this.$$validators && this.$$validators.length || this.$$asyncValidators && this.$$asyncValidators.length;
+        }
+    }, {
+        key: 'value',
+        value: function value() {
+            return this.$$value;
+        }
+    }, {
+        key: 'setValue',
+        value: function setValue(value) {
+            // This will flow through to the internal watcher.
+            this.$$model.set(this.name, value);
+        }
+    }, {
+        key: 'setDirty',
+        value: function setDirty(dirty) {
+            this.$$dirty = !!dirty;
+            this.invalidate();
+        }
+    }, {
+        key: 'setActive',
+        value: function setActive(active) {
+            this.$$active = !!active;
+
+            if (this.$$active && this.$$lastActiveValue) {
+                this.setValue(this.$$lastActiveValue);
+            } else if (!this.$$active) {
+                var current = this.value();
+
+                // Cache the current value for when/if the field is re-activated.
+                if (typeof current !== 'undefined') {
+                    this.setValue(undefined);
+                    this.$$lastActiveValue = current;
+                }
+            }
+
+            this.$emit('toggle', this, this.$$active);
+        }
+    }, {
+        key: 'addValidator',
+        value: function addValidator(validator) {
+            if (typeof validator !== 'function') throw new TypeError('validator must be a valid function');
+
+            if (!this.$$validators) this.$$validators = [];
+
+            this.$$validators.push(validator);
+            return this;
+        }
+    }, {
+        key: 'addAsyncValidator',
+        value: function addAsyncValidator(validator) {
+            if (typeof validator !== 'function') throw new TypeError('validator must be a valid function');
+
+            if (!this.$$asyncValidators) this.$$asyncValidators = [];
+
+            this.$$asyncValidators.push(validator);
+            return this;
+        }
+    }, {
+        key: 'validate',
+        value: function validate(newValue) {
+            var _this2 = this;
+
+            var errors = [];
+            var result = this.$processValidators(addError);
+
+            // Can we exit early?
+            if (!result || !this.$$asyncValidators || !this.$$asyncValidators.length) {
+                this.$completeValidation(result, errors);
+                return this.$$q.resolve(result);
+            }
+
+            // Run the async validators
+            var ref = ++this.$$validationRef;
+            this.$$validationSate = ValidationState.Unknown;
+
+            if (!this.$$deferredValidation) this.$$deferredValidation = this.$$q.defer();
+
+            this.$processAsyncValidators(addError).then(function (result) {
+                if (ref === _this2.$$validationRef) _this2.$completeValidation(result, errors);
+            }, function (err) {
+                if (ref === _this2.$$validationRef && _this2.$$deferredValidation) {
+                    var deferred = _this2.$$deferredValidation;
+                    _this2.$$deferredValidation = null;
+                    deferred.reject(err);
+                }
+            });
+
+            return this.$$deferredValidation.promise;
+
+            function addError(err) {
+                errors.push(err);
+            }
+        }
+    }, {
+        key: 'watch',
+        value: function watch(fn, comparer) {
+            return this.$$model.watch(this.name, fn, comparer || fieldValueComparer);
+        }
+    }, {
+        key: 'on',
+        value: function on(type, fn) {
+            var _this3 = this;
+
+            if (typeof fn !== 'function') throw new TypeError('fn must be a valid function');
+
+            if (!this.$$listeners.hasOwnProperty(type)) this.$$listeners[type] = [];
+
+            this.$$listeners[type].push(fn);
+
+            return function () {
+                return _this3.off(type, fn);
+            };
+        }
+    }, {
+        key: 'off',
+        value: function off(type, fn) {
+            if (typeof fn !== 'function') throw new TypeError('fn must be a valid function');
+
+            if (listeners && listeners.length > 0) {
+                var idx = listeners.indexOf(fn);
+                if (idx >= 0) listeners.splice(idx, 1);
+            }
+        }
+    }, {
+        key: '$emit',
+        value: function $emit(type) {
+            if (!this.$$listeners.hasOwnProperty(type) || this.$$listeners[type].length === 0) return;
+
+            var listeners = this.$$listeners[type].slice();
+            var argLen = arguments.length;
+            var args = argLen > 4 ? Array.prototype.slice(arguments, 1) : null;
+
+            for (var i = 0, j = listeners.length; i < j; ++i) {
+                var listener = listeners[i];
+
+                switch (argLen) {
+                    case 1:
+                        listener();
+                        break;
+                    case 2:
+                        listener(arguments[1]);
+                        break;
+                    case 3:
+                        listener(arguments[1], arguments[2]);
+                        break;
+                    case 4:
+                        listener(arguments[1], arguments[2], arguments[3]);
+                        break;
+                    default:
+                        listener.apply(undefined, args);
+                        break;
+                }
+            }
+        }
+    }, {
+        key: '$completeValidation',
+        value: function $completeValidation(result, errors) {
+            var deferred = this.$$deferredValidation;
+            if (deferred) this.$$deferredValidation = null;
+
+            this.$$validationState = result ? ValidationState.Valid : ValidationState.Invalid;
+            this.$emit('validate', this, result, errors);
+
+            if (deferred) deferred.resolve(result);
+        }
+    }, {
+        key: '$processValidators',
+        value: function $processValidators(addError) {
+            var validators = this.$$validators;
+
+            if (validators) {
+                for (var i = 0, j = validators.length; i < j; ++i) {
+                    if (!validators[i](this, addError)) return false;
+                }
+            }
+
+            return true;
+        }
+    }, {
+        key: '$processAsyncValidators',
+        value: function $processAsyncValidators(addError) {
+            var _this4 = this;
+
+            var promises = this.$$asyncValidators.map(function (v) {
+                return v(_this4, addError);
+            });
+            return this.$$q.all(promises).then(function (results) {
+                return results.every(function (result) {
+                    return result;
+                });
+            });
+        }
+    }]);
+
+    return ModelField;
+}();
+
+function labelise(name) {
+    name = name.substring(name.lastIndexOf('.') + 1);
+
+    var label = name.replace(/([A-Z]+)/g, ' $1').replace(/\W+/g, ' ').replace(/\s{2,}/g, ' ');
+
+    return label[0].toUpperCase() + label.substring(1);
+}
+
+/***/ }),
+/* 4 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.createCondition = createCondition;
+
+var _util = __webpack_require__(0);
+
+var util = _interopRequireWildcard(_util);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+function createCondition(condition, model, parser, locals, callback) {
+    if (!callback && typeof locals === 'function') {
+        callback = locals;
+        locals = null;
+    }
+
+    var dependentFields = [];
+
+    condition = condition.replace(/\[([a-zA-Z\$_][\w.]+)\]/g, function (m, fieldName) {
+        if (dependentFields.indexOf(fieldName) < 0) dependentFields.push(fieldName);
+        return fieldName;
+    });
+
+    if (dependentFields.length === 0) console.warn('warning: createCondition: conditional expression does not contain any field references and will only be evaluated once');
+
+    var expr = parser(condition);
+    var lastResult = void 0;
+
+    evaluateCondition();
+    var unwatchers = dependentFields.map(function (name) {
+        return model.watch(name, evaluateCondition);
+    });
+
+    return function () {
+        return unwatchers.forEach(function (unwatch) {
+            return unwatch();
+        });
+    };
+
+    function evaluateCondition() {
+        var context = Object.assign({ '$util': util }, locals);
+        var result = !!expr(context, model.getState());
+
+        if (result !== lastResult) {
+            lastResult = result;
+            callback(lastResult);
+        }
+    }
+}
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.util = undefined;
+
+var _model = __webpack_require__(1);
+
+Object.keys(_model).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function get() {
+      return _model[key];
+    }
+  });
+});
+
+var _modelField = __webpack_require__(3);
+
+Object.keys(_modelField).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function get() {
+      return _modelField[key];
+    }
+  });
+});
+
+var _ng = __webpack_require__(6);
+
+var _ng2 = _interopRequireDefault(_ng);
+
+var _util = __webpack_require__(0);
+
+var util = _interopRequireWildcard(_util);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+exports.util = util;
+exports.default = _ng2.default;
+
+/***/ }),
 /* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1161,13 +1161,13 @@ var _fieldConditionFor = __webpack_require__(14);
 
 var _fieldCondition = __webpack_require__(15);
 
-var _readonlyFieldFor = __webpack_require__(22);
+var _readonlyFieldFor = __webpack_require__(16);
 
-var _fieldDynamicModelForEach = __webpack_require__(16);
+var _fieldDynamicModelForEach = __webpack_require__(17);
 
-var _fieldValidationFor = __webpack_require__(17);
+var _fieldValidationFor = __webpack_require__(18);
 
-var _fieldValidationMessageFor = __webpack_require__(18);
+var _fieldValidationMessageFor = __webpack_require__(19);
 
 function directive(ctor) {
     var inject = ctor.dependencies || ctor.prototype.dependencies;
@@ -1482,7 +1482,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.FieldConditionForDirective = FieldConditionForDirective;
 
-var _createCondition = __webpack_require__(3);
+var _createCondition = __webpack_require__(4);
 
 function FieldConditionForDirective(parser) {
     this.parser = parser;
@@ -1523,7 +1523,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.FieldConditionDirective = FieldConditionDirective;
 
-var _createCondition = __webpack_require__(3);
+var _createCondition = __webpack_require__(4);
 
 function FieldConditionDirective(parser) {
     this.parser = parser;
@@ -1560,9 +1560,55 @@ FieldConditionDirective.prototype = {
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.ReadonlyFieldForDirective = ReadonlyFieldForDirective;
+
+var _objectPath = __webpack_require__(2);
+
+function ReadonlyFieldForDirective(parse) {
+    this.parse = parse;
+}
+
+ReadonlyFieldForDirective.prototype = {
+    restrict: 'A',
+    require: '^^dynamicModel',
+    dependencies: ['$parse'],
+    link: function link(scope, $element, attrs, modelCtrl) {
+        if (!attrs['readonlyFieldFor']) throw new TypeError('readonly-field-for: missing required attribute "readonly-field-for"');
+
+        var model = modelCtrl.model;
+        var field = model.field(attrs['readonlyFieldFor']);
+
+        var locals = void 0,
+            expr = void 0;
+
+        if (attrs['expr']) {
+            expr = this.parse(attrs['expr']);
+            locals = {};
+        }
+
+        field.on('change', onUpdated);
+        onUpdated(field);
+
+        function onUpdated(f) {
+            var val = expr ? expr(scope, model.getState()) : f.value();
+            $element.html(val);
+        }
+    }
+};
+
+/***/ }),
+/* 17 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
 exports.FieldDynamicModelForEachDirective = FieldDynamicModelForEachDirective;
 exports.PreFieldDynamicModelForEachDirective = PreFieldDynamicModelForEachDirective;
-var ExpressionPattern = /^\s*((?:[a-z_$][a-z0-9_$]*)(?:\.[a-z_$][a-z0-9_$]*)*)(?:\s+track\s+by\s+([\s\S]+))?\s*$/i;
+var ExpressionPattern = /^\s*((?:[a-z_$][a-z0-9_$]*)(?:\.[a-z_$][a-z0-9_$]*)*)\s*$/i;
 var RemovedFlag = '$$removed';
 
 function findBlockIndexByValue(blocks, value) {
@@ -1587,12 +1633,14 @@ function FieldDynamicModelForEachDirective(q, animate, modelBuilder) {
         compile: function compile($element, attrs) {
             if (!attrs['fieldDynamicModelForEach']) throw new TypeError('field-dynamic-model-for-each: missing required attribute "field-dynamic-model-for-each"');
 
-            var expression = attrs['fieldDynamicModelForEach'];
-            var match = expression.match(ExpressionPattern);
-            var fieldName = match[1];
-
             return function (scope, $element, attrs, ctrl, transclude) {
-                var field = ctrl.model.field(fieldName);
+                var expression = attrs['fieldDynamicModelForEach'];
+                var match = expression.match(ExpressionPattern);
+
+                if (match === null) throw new TypeError('field-dynamic-model-for=each: "' + expression + '" is not a valid field name');
+
+                var field = ctrl.model.field(match[1]);
+
                 var lastBlocks = [];
 
                 field.addAsyncValidator(function (f, addError) {
@@ -1681,6 +1729,7 @@ function FieldDynamicModelForEachDirective(q, animate, modelBuilder) {
             function updateBlock(block, index, totalBlocks) {
                 block.scope.$model = block.model;
                 block.scope.$index = index;
+                block.scope.$count = totalBlocks;
             }
 
             function createModel(parentField, state) {
@@ -1711,7 +1760,7 @@ function PreFieldDynamicModelForEachDirective() {
 }
 
 /***/ }),
-/* 17 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1819,7 +1868,7 @@ function createValidator(metadata, factory) {
 }
 
 /***/ }),
-/* 18 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1860,55 +1909,6 @@ FieldValidationMessageForDirective.prototype = {
         function update(valid, error) {
             $element.text(valid ? '' : error);
             $element[!valid && error ? 'show' : 'hide']();
-        }
-    }
-};
-
-/***/ }),
-/* 19 */,
-/* 20 */,
-/* 21 */,
-/* 22 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-exports.ReadonlyFieldForDirective = ReadonlyFieldForDirective;
-
-var _objectPath = __webpack_require__(5);
-
-function ReadonlyFieldForDirective(parse) {
-    this.parse = parse;
-}
-
-ReadonlyFieldForDirective.prototype = {
-    restrict: 'A',
-    require: '^^dynamicModel',
-    dependencies: ['$parse'],
-    link: function link(scope, $element, attrs, modelCtrl) {
-        if (!attrs['readonlyFieldFor']) throw new TypeError('readonly-field-for: missing required attribute "readonly-field-for"');
-
-        var model = modelCtrl.model;
-        var field = model.field(attrs['readonlyFieldFor']);
-
-        var locals = void 0,
-            expr = void 0;
-
-        if (attrs['expr']) {
-            expr = this.parse(attrs['expr']);
-            locals = {};
-        }
-
-        field.on('change', onUpdated);
-        onUpdated(field);
-
-        function onUpdated(f) {
-            var val = expr ? expr(scope, model.getState()) : f.value();
-            $element.html(val);
         }
     }
 };
