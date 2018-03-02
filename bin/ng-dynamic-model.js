@@ -1625,7 +1625,6 @@ function FieldDynamicModelForEachDirective(q, animate, modelBuilder) {
     return {
         restrict: 'A',
         transclude: 'element',
-        priority: 1000,
         terminal: true,
         dependencies: ['$animate', '$compile', 'ModelBuilder'],
         require: '^^dynamicModel',
@@ -1746,7 +1745,7 @@ function FieldDynamicModelForEachDirective(q, animate, modelBuilder) {
 function PreFieldDynamicModelForEachDirective() {
     return {
         restrict: 'A',
-        priority: 1001,
+        priority: 1,
         compile: function compile($element, attrs) {
             var wrapper = angular.element('<div dynamic-model="$model"></div>');
             var wrapperNode = wrapper[0];
