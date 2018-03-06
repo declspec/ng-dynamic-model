@@ -45,7 +45,7 @@
         <button type="button" ng-click="add()">Add</button>
         <form dynamic-model="::model">
 
-            <div field-dynamic-model-for-each="{{::fieldName}}" dynamic-model="$model">
+            <div field-repeat-for="{{::fieldName}}" dynamic-model="$model">
                 <div field-validation-for="test" validators="['required']">
                     {{$index}}. <input type="text" ng-model="test" field-model-for="test" /><button ng-click="remove($index)">Remove</button>
                     <br/>

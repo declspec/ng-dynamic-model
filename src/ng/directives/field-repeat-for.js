@@ -10,9 +10,9 @@ function findBlockIndexByValue(blocks, value) {
     return -1;
 }
 
-FieldDynamicModelForEachDirective.$inject = [ '$q', '$animate', 'ModelBuilder' ];
+FieldRepeatForDirective.$inject = [ '$q', '$animate', 'ModelBuilder' ];
 
-export function FieldDynamicModelForEachDirective(q, animate, modelBuilder) {
+export function FieldRepeatForDirective(q, animate, modelBuilder) {
     return {
         restrict: 'A',
         transclude: 'element',
@@ -22,15 +22,15 @@ export function FieldDynamicModelForEachDirective(q, animate, modelBuilder) {
         require: '^^dynamicModel',
     
         compile: function($element, attrs) {
-            if (!attrs['fieldDynamicModelForEach'])
-                throw new TypeError('field-dynamic-model-for-each: missing required attribute "field-dynamic-model-for-each"');
+            if (!attrs['fieldRepeatFor'])
+                throw new TypeError('field-repeat-for: missing required attribute "field-repeat-for"');
 
             return function(scope, $element, attrs, ctrl, transclude) {
-                const expression = attrs['fieldDynamicModelForEach'];
+                const expression = attrs['fieldRepeatFor'];
                 const match = expression.match(ExpressionPattern);
 
                 if (match === null)
-                    throw new TypeError(`field-dynamic-model-for=each: "${expression}" is not a valid field name`);
+                    throw new TypeError(`field-repeat-for: "${expression}" is not a valid field name`);
 
                 const field = ctrl.model.field(match[1]);
                 

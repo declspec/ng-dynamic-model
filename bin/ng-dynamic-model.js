@@ -1177,7 +1177,7 @@ var _fieldCondition = __webpack_require__(15);
 
 var _readonlyFieldFor = __webpack_require__(16);
 
-var _fieldDynamicModelForEach = __webpack_require__(17);
+var _fieldRepeatFor = __webpack_require__(23);
 
 var _fieldValidationFor = __webpack_require__(18);
 
@@ -1196,7 +1196,7 @@ function directive(ctor) {
     return factory;
 }
 
-var lib = angular.module('ng-dynamic-model', []).config(_config.ValidationConfig).provider('ValidatorFactory', _validatorFactory.ValidatorFactoryProvider).service('ModelBuilder', _modelBuilder.ModelBuilder).directive('dynamicModel', directive(_dynamicModel.DynamicModelDirective)).directive('fieldModelFor', directive(_fieldModelFor.FieldModelForDirective)).directive('fieldMultiModelFor', directive(_fieldMultiModelFor.FieldMultiModelForDirective)).directive('fieldConditionFor', directive(_fieldConditionFor.FieldConditionForDirective)).directive('fieldCondition', directive(_fieldCondition.FieldConditionDirective)).directive('fieldValidationFor', directive(_fieldValidationFor.FieldValidationForDirective)).directive('fieldValidationMessageFor', directive(_fieldValidationMessageFor.FieldValidationMessageForDirective)).directive('readonlyFieldFor', directive(_readonlyFieldFor.ReadonlyFieldForDirective)).directive('fieldDynamicModelForEach', _fieldDynamicModelForEach.FieldDynamicModelForEachDirective);
+var lib = angular.module('ng-dynamic-model', []).config(_config.ValidationConfig).provider('ValidatorFactory', _validatorFactory.ValidatorFactoryProvider).service('ModelBuilder', _modelBuilder.ModelBuilder).directive('dynamicModel', directive(_dynamicModel.DynamicModelDirective)).directive('fieldModelFor', directive(_fieldModelFor.FieldModelForDirective)).directive('fieldMultiModelFor', directive(_fieldMultiModelFor.FieldMultiModelForDirective)).directive('fieldConditionFor', directive(_fieldConditionFor.FieldConditionForDirective)).directive('fieldCondition', directive(_fieldCondition.FieldConditionDirective)).directive('fieldValidationFor', directive(_fieldValidationFor.FieldValidationForDirective)).directive('fieldValidationMessageFor', directive(_fieldValidationMessageFor.FieldValidationMessageForDirective)).directive('readonlyFieldFor', directive(_readonlyFieldFor.ReadonlyFieldForDirective)).directive('fieldRepeatFor', _fieldRepeatFor.FieldRepeatForDirective);
 
 exports.default = lib.name;
 
@@ -1601,156 +1601,7 @@ ReadonlyFieldForDirective.prototype = {
 };
 
 /***/ }),
-/* 17 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-exports.FieldDynamicModelForEachDirective = FieldDynamicModelForEachDirective;
-var ExpressionPattern = /^\s*((?:[a-z_$][a-z0-9_$]*)(?:\.[a-z_$][a-z0-9_$]*)*)\s*$/i;
-var RemovedFlag = '$$removed';
-
-function findBlockIndexByValue(blocks, value) {
-    for (var i = 0, j = blocks.length; i < j; ++i) {
-        if (blocks[i].value === value) return i;
-    }
-
-    return -1;
-}
-
-FieldDynamicModelForEachDirective.$inject = ['$q', '$animate', 'ModelBuilder'];
-
-function FieldDynamicModelForEachDirective(q, animate, modelBuilder) {
-    return {
-        restrict: 'A',
-        transclude: 'element',
-        terminal: true,
-        priority: 10,
-        dependencies: ['$animate', '$compile', 'ModelBuilder'],
-        require: '^^dynamicModel',
-
-        compile: function compile($element, attrs) {
-            if (!attrs['fieldDynamicModelForEach']) throw new TypeError('field-dynamic-model-for-each: missing required attribute "field-dynamic-model-for-each"');
-
-            return function (scope, $element, attrs, ctrl, transclude) {
-                var expression = attrs['fieldDynamicModelForEach'];
-                var match = expression.match(ExpressionPattern);
-
-                if (match === null) throw new TypeError('field-dynamic-model-for=each: "' + expression + '" is not a valid field name');
-
-                var field = ctrl.model.field(match[1]);
-
-                var lastBlocks = [];
-
-                field.addAsyncValidator(function (f, addError) {
-                    return q.all(lastBlocks.map(function (b) {
-                        return b.model.validate();
-                    })).then(function (results) {
-                        return results.every(function (r) {
-                            return r;
-                        });
-                    });
-                });
-
-                field.watch(onFieldUpdated);
-                onFieldUpdated(field.value());
-
-                function onFieldUpdated(newValue) {
-                    var nextBlocks = [];
-
-                    if (Array.isArray(newValue)) {
-                        for (var i = 0, j = newValue.length; i < j; ++i) {
-                            var value = newValue[i];
-                            var idx = findBlockIndexByValue(lastBlocks, value);
-
-                            if (idx >= 0) {
-                                // Existing value
-                                nextBlocks.push(lastBlocks[idx]);
-                                lastBlocks.splice(idx, 1);
-                            } else {
-                                // Never before seen value
-                                nextBlocks.push({
-                                    value: value,
-                                    scope: undefined,
-                                    clone: undefined,
-                                    model: createModel(field, value)
-                                });
-                            }
-                        }
-                    }
-
-                    // Remove blocks that weren't transferred
-                    for (var _i = 0, _j = lastBlocks.length; _i < _j; ++_i) {
-                        var block = lastBlocks[_i];
-                        animate.leave(block.clone);
-
-                        if (block.clone[0].parentNode) block.clone[0][RemovedFlag] = true;
-
-                        block.scope.$destroy();
-                    }
-
-                    var previousNode = $element[0];
-
-                    var _loop = function _loop(_i2, _j2) {
-                        var block = nextBlocks[_i2];
-
-                        if (!block.scope) {
-                            // Brand new block
-                            transclude(function (clone, scope) {
-                                block.scope = scope;
-                                animate.enter(clone, null, previousNode);
-                                previousNode = clone[0];
-                                block.clone = clone;
-                                updateBlock(block, _i2, nextBlocks.length);
-                            });
-                        } else {
-                            // Re-use the element
-                            var nextNode = previousNode;
-
-                            do {
-                                nextNode = previousNode.nextSibling;
-                            } while (nextNode && nextNode[RemovedFlag]);
-
-                            if (block.clone[0] !== nextNode) {
-                                // Order for this node doesn't match
-                                animate.move(block.clone[0], null, previousNode);
-                            }
-
-                            previousNode = block.clone[0];
-                            updateBlock(block, _i2, nextBlocks.length);
-                        }
-                    };
-
-                    for (var _i2 = 0, _j2 = nextBlocks.length; _i2 < _j2; ++_i2) {
-                        _loop(_i2, _j2);
-                    }
-
-                    lastBlocks = nextBlocks;
-                }
-            };
-
-            function updateBlock(block, index, totalBlocks) {
-                block.scope.$model = block.model;
-                block.scope.$index = index;
-                block.scope.$count = totalBlocks;
-            }
-
-            function createModel(parentField, state) {
-                var model = modelBuilder.build(state);
-                model.subscribe(function () {
-                    return parentField.setDirty(true);
-                });
-                return model;
-            }
-        }
-    };
-}
-
-/***/ }),
+/* 17 */,
 /* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1903,6 +1754,159 @@ FieldValidationMessageForDirective.prototype = {
         }
     }
 };
+
+/***/ }),
+/* 20 */,
+/* 21 */,
+/* 22 */,
+/* 23 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.FieldRepeatForDirective = FieldRepeatForDirective;
+var ExpressionPattern = /^\s*((?:[a-z_$][a-z0-9_$]*)(?:\.[a-z_$][a-z0-9_$]*)*)\s*$/i;
+var RemovedFlag = '$$removed';
+
+function findBlockIndexByValue(blocks, value) {
+    for (var i = 0, j = blocks.length; i < j; ++i) {
+        if (blocks[i].value === value) return i;
+    }
+
+    return -1;
+}
+
+FieldRepeatForDirective.$inject = ['$q', '$animate', 'ModelBuilder'];
+
+function FieldRepeatForDirective(q, animate, modelBuilder) {
+    return {
+        restrict: 'A',
+        transclude: 'element',
+        terminal: true,
+        priority: 10,
+        dependencies: ['$animate', '$compile', 'ModelBuilder'],
+        require: '^^dynamicModel',
+
+        compile: function compile($element, attrs) {
+            if (!attrs['fieldRepeatFor']) throw new TypeError('field-repeat-for: missing required attribute "field-repeat-for"');
+
+            return function (scope, $element, attrs, ctrl, transclude) {
+                var expression = attrs['fieldRepeatFor'];
+                var match = expression.match(ExpressionPattern);
+
+                if (match === null) throw new TypeError('field-repeat-for: "' + expression + '" is not a valid field name');
+
+                var field = ctrl.model.field(match[1]);
+
+                var lastBlocks = [];
+
+                field.addAsyncValidator(function (f, addError) {
+                    return q.all(lastBlocks.map(function (b) {
+                        return b.model.validate();
+                    })).then(function (results) {
+                        return results.every(function (r) {
+                            return r;
+                        });
+                    });
+                });
+
+                field.watch(onFieldUpdated);
+                onFieldUpdated(field.value());
+
+                function onFieldUpdated(newValue) {
+                    var nextBlocks = [];
+
+                    if (Array.isArray(newValue)) {
+                        for (var i = 0, j = newValue.length; i < j; ++i) {
+                            var value = newValue[i];
+                            var idx = findBlockIndexByValue(lastBlocks, value);
+
+                            if (idx >= 0) {
+                                // Existing value
+                                nextBlocks.push(lastBlocks[idx]);
+                                lastBlocks.splice(idx, 1);
+                            } else {
+                                // Never before seen value
+                                nextBlocks.push({
+                                    value: value,
+                                    scope: undefined,
+                                    clone: undefined,
+                                    model: createModel(field, value)
+                                });
+                            }
+                        }
+                    }
+
+                    // Remove blocks that weren't transferred
+                    for (var _i = 0, _j = lastBlocks.length; _i < _j; ++_i) {
+                        var block = lastBlocks[_i];
+                        animate.leave(block.clone);
+
+                        if (block.clone[0].parentNode) block.clone[0][RemovedFlag] = true;
+
+                        block.scope.$destroy();
+                    }
+
+                    var previousNode = $element[0];
+
+                    var _loop = function _loop(_i2, _j2) {
+                        var block = nextBlocks[_i2];
+
+                        if (!block.scope) {
+                            // Brand new block
+                            transclude(function (clone, scope) {
+                                block.scope = scope;
+                                animate.enter(clone, null, previousNode);
+                                previousNode = clone[0];
+                                block.clone = clone;
+                                updateBlock(block, _i2, nextBlocks.length);
+                            });
+                        } else {
+                            // Re-use the element
+                            var nextNode = previousNode;
+
+                            do {
+                                nextNode = previousNode.nextSibling;
+                            } while (nextNode && nextNode[RemovedFlag]);
+
+                            if (block.clone[0] !== nextNode) {
+                                // Order for this node doesn't match
+                                animate.move(block.clone[0], null, previousNode);
+                            }
+
+                            previousNode = block.clone[0];
+                            updateBlock(block, _i2, nextBlocks.length);
+                        }
+                    };
+
+                    for (var _i2 = 0, _j2 = nextBlocks.length; _i2 < _j2; ++_i2) {
+                        _loop(_i2, _j2);
+                    }
+
+                    lastBlocks = nextBlocks;
+                }
+            };
+
+            function updateBlock(block, index, totalBlocks) {
+                block.scope.$model = block.model;
+                block.scope.$index = index;
+                block.scope.$count = totalBlocks;
+            }
+
+            function createModel(parentField, state) {
+                var model = modelBuilder.build(state);
+                model.subscribe(function () {
+                    return parentField.setDirty(true);
+                });
+                return model;
+            }
+        }
+    };
+}
 
 /***/ })
 /******/ ]);
