@@ -17,6 +17,7 @@ export function FieldDynamicModelForEachDirective(q, animate, modelBuilder) {
         restrict: 'A',
         transclude: 'element',
         terminal: true,
+        priority: 10,
         dependencies: [ '$animate', '$compile', 'ModelBuilder' ],
         require: '^^dynamicModel',
     
@@ -58,8 +59,12 @@ export function FieldDynamicModelForEachDirective(q, animate, modelBuilder) {
                             }
                             else {
                                 // Never before seen value
-                                const block = { value: value, scope: undefined, clone: undefined, model: createModel(field, value) };
-                                nextBlocks.push(block);
+                                nextBlocks.push({ 
+                                    value: value, 
+                                    scope: undefined, 
+                                    clone: undefined, 
+                                    model: createModel(field, value) 
+                                });
                             }
                         }
                     }
@@ -125,21 +130,4 @@ export function FieldDynamicModelForEachDirective(q, animate, modelBuilder) {
             }
         }
     }; 
-}
-
-export function PreFieldDynamicModelForEachDirective() {
-    return {
-        restrict: 'A',
-        priority: 1,
-        compile: function($element, attrs) {
-            const wrapper = angular.element('<div dynamic-model="$model"></div>');
-            const wrapperNode = wrapper[0];
-            const parentNode = $element[0];
-    
-            while(parentNode.childNodes.length)
-                wrapperNode.appendChild(parentNode.childNodes[0]);
-    
-            $element.append(wrapper);
-        }
-    };
 }

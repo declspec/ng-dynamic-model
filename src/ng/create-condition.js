@@ -1,5 +1,13 @@
 import * as util from '../util';
 
+function fieldValueComparer(v1, v2) {
+    if (v1 !== v2)
+        return false;
+
+    let type = util.getType(v1)
+    return type !== 'object' && type !== 'array';
+}
+
 export function createCondition(condition, model, parser, locals, callback) {
     if (!callback && typeof(locals) === 'function') {
         callback = locals;
@@ -21,7 +29,7 @@ export function createCondition(condition, model, parser, locals, callback) {
     let lastResult;
 
     evaluateCondition();
-    const unwatchers = dependentFields.map(name => model.watch(name, evaluateCondition));
+    const unwatchers = dependentFields.map(name => model.watch(name, evaluateCondition, fieldValueComparer));
 
     return () => unwatchers.forEach(unwatch => unwatch());
 

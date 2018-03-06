@@ -26,7 +26,7 @@ FieldValidationForDirective.prototype = {
             return acc;
         }, []);
 
-        this.$onDestroy = () => unbinders.forEach(fn => fn());
+        scope.$on('$destroy', () => unbinders.forEach(fn => fn()));
 
         if (attrs.hasOwnProperty('validators')) {
             const unwatch = scope.$watch(attrs['validators'], newValue => {

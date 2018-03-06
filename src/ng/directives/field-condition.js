@@ -22,6 +22,6 @@ FieldConditionDirective.prototype = {
         speed = attrs['speed'] ? parseInt(attrs['speed'], 10) : 300;
 
         // When destroyed, release the condition
-        this.$onDestroy = off;
+        scope.$on('$destroy', off);
     }
 };

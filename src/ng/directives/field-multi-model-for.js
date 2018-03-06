@@ -24,16 +24,8 @@ FieldMultiModelForDirective.prototype = {
                 scope.$apply(processChange);
         }); 
 
-        const unbindChange = field.on('change', onUpdate);
-        const unbindToggle = field.on('toggle', onUpdate);
-        
-        // Remove all listeners once the directive is destroyed.
-        this.$onDestroy = () => {
-            unbindChange();
-            unbindToggle();
-        };
-
-        onUpdate(field);
+        scope.$on('$destroy', field.watch(onUpdate));
+        onUpdate(field.value());
 
         function processChange() {
             if (!allowMultiple)
@@ -62,10 +54,9 @@ FieldMultiModelForDirective.prototype = {
             }
         }
 
-        function onUpdate(field) {
-            const modelValue = field.value();
-            const shouldBeChecked = (!Array.isArray(modelValue) && compareValues(modelValue)) 
-                || (Array.isArray(modelValue) && modelValue.some(compareValues));
+        function onUpdate(fieldValue) {
+            const shouldBeChecked = (!Array.isArray(fieldValue) && compareValues(fieldValue)) 
+                || (Array.isArray(fieldValue) && fieldValue.some(compareValues));
 
             if (element.checked !== shouldBeChecked)
                 element.checked = shouldBeChecked;

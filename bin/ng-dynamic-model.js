@@ -334,16 +334,21 @@ var Model = exports.Model = function () {
     }, {
         key: 'set',
         value: function set(path, value) {
-            if (typeof path === 'string') objectPath.set(this.$$state, path, value);else {
+            if (typeof path !== 'string') {
+                value = path;
+                path = null;
+            }
+
+            if (path !== null) objectPath.set(this.$$state, path, value);else {
                 // Update the entire state when no path is specified.
-                this.$$state = path;
+                this.$$state = value;
             }
 
             // Invoke all the subscribers
             var subscribers = this.$$subscribers.slice();
 
             for (var i = 0, j = subscribers.length; i < j; ++i) {
-                subscribers[i](this.$$state);
+                subscribers[i](this.$$state, path);
             }
 
             return this;
@@ -938,6 +943,8 @@ var ModelField = exports.ModelField = function () {
         value: function off(type, fn) {
             if (typeof fn !== 'function') throw new TypeError('fn must be a valid function');
 
+            var listeners = this.$$listeners[type];
+
             if (listeners && listeners.length > 0) {
                 var idx = listeners.indexOf(fn);
                 if (idx >= 0) listeners.splice(idx, 1);
@@ -1043,6 +1050,13 @@ var util = _interopRequireWildcard(_util);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
+function fieldValueComparer(v1, v2) {
+    if (v1 !== v2) return false;
+
+    var type = util.getType(v1);
+    return type !== 'object' && type !== 'array';
+}
+
 function createCondition(condition, model, parser, locals, callback) {
     if (!callback && typeof locals === 'function') {
         callback = locals;
@@ -1063,7 +1077,7 @@ function createCondition(condition, model, parser, locals, callback) {
 
     evaluateCondition();
     var unwatchers = dependentFields.map(function (name) {
-        return model.watch(name, evaluateCondition);
+        return model.watch(name, evaluateCondition, fieldValueComparer);
     });
 
     return function () {
@@ -1182,7 +1196,7 @@ function directive(ctor) {
     return factory;
 }
 
-var lib = angular.module('ng-dynamic-model', []).config(_config.ValidationConfig).provider('ValidatorFactory', _validatorFactory.ValidatorFactoryProvider).service('ModelBuilder', _modelBuilder.ModelBuilder).directive('dynamicModel', directive(_dynamicModel.DynamicModelDirective)).directive('fieldModelFor', directive(_fieldModelFor.FieldModelForDirective)).directive('fieldMultiModelFor', directive(_fieldMultiModelFor.FieldMultiModelForDirective)).directive('fieldConditionFor', directive(_fieldConditionFor.FieldConditionForDirective)).directive('fieldCondition', directive(_fieldCondition.FieldConditionDirective)).directive('fieldValidationFor', directive(_fieldValidationFor.FieldValidationForDirective)).directive('fieldValidationMessageFor', directive(_fieldValidationMessageFor.FieldValidationMessageForDirective)).directive('readonlyFieldFor', directive(_readonlyFieldFor.ReadonlyFieldForDirective)).directive('fieldDynamicModelForEach', _fieldDynamicModelForEach.FieldDynamicModelForEachDirective).directive('fieldDynamicModelForEach', _fieldDynamicModelForEach.PreFieldDynamicModelForEachDirective);
+var lib = angular.module('ng-dynamic-model', []).config(_config.ValidationConfig).provider('ValidatorFactory', _validatorFactory.ValidatorFactoryProvider).service('ModelBuilder', _modelBuilder.ModelBuilder).directive('dynamicModel', directive(_dynamicModel.DynamicModelDirective)).directive('fieldModelFor', directive(_fieldModelFor.FieldModelForDirective)).directive('fieldMultiModelFor', directive(_fieldMultiModelFor.FieldMultiModelForDirective)).directive('fieldConditionFor', directive(_fieldConditionFor.FieldConditionForDirective)).directive('fieldCondition', directive(_fieldCondition.FieldConditionDirective)).directive('fieldValidationFor', directive(_fieldValidationFor.FieldValidationForDirective)).directive('fieldValidationMessageFor', directive(_fieldValidationMessageFor.FieldValidationMessageForDirective)).directive('readonlyFieldFor', directive(_readonlyFieldFor.ReadonlyFieldForDirective)).directive('fieldDynamicModelForEach', _fieldDynamicModelForEach.FieldDynamicModelForEachDirective);
 
 exports.default = lib.name;
 
@@ -1355,8 +1369,8 @@ FieldModelForDirective.prototype = {
         var render = modelController.$render;
 
         // Set up change handlers and update the UI
-        field.watch(onUpdate);
-        onUpdate();
+        scope.$on('$destroy', field.watch(onUpdate));
+        onUpdate(field.value());
 
         modelController.$render = function () {
             var value = this.$modelValue || this.$viewValue;
@@ -1370,12 +1384,11 @@ FieldModelForDirective.prototype = {
             return result;
         };
 
-        function onUpdate() {
+        function onUpdate(fieldValue) {
             var uiValue = modelController.$modelValue || modelController.$viewValue;
-            var modelValue = field.value();
 
-            if (uiValue !== modelValue) {
-                modelController.$viewValue = modelValue;
+            if (uiValue !== fieldValue) {
+                modelController.$viewValue = fieldValue;
                 // Make sure to call the original functions to avoid infinitely recursing.
                 commitViewValue.call(modelController);
                 render.call(modelController);
@@ -1420,16 +1433,8 @@ FieldMultiModelForDirective.prototype = {
             if (allowMultiple || this.checked) scope.$apply(processChange);
         });
 
-        var unbindChange = field.on('change', onUpdate);
-        var unbindToggle = field.on('toggle', onUpdate);
-
-        // Remove all listeners once the directive is destroyed.
-        this.$onDestroy = function () {
-            unbindChange();
-            unbindToggle();
-        };
-
-        onUpdate(field);
+        scope.$on('$destroy', field.watch(onUpdate));
+        onUpdate(field.value());
 
         function processChange() {
             if (!allowMultiple) return field.setValue(value);
@@ -1455,9 +1460,8 @@ FieldMultiModelForDirective.prototype = {
             }
         }
 
-        function onUpdate(field) {
-            var modelValue = field.value();
-            var shouldBeChecked = !Array.isArray(modelValue) && compareValues(modelValue) || Array.isArray(modelValue) && modelValue.some(compareValues);
+        function onUpdate(fieldValue) {
+            var shouldBeChecked = !Array.isArray(fieldValue) && compareValues(fieldValue) || Array.isArray(fieldValue) && fieldValue.some(compareValues);
 
             if (element.checked !== shouldBeChecked) element.checked = shouldBeChecked;
         }
@@ -1507,7 +1511,7 @@ FieldConditionForDirective.prototype = {
         speed = attrs['speed'] ? parseInt(attrs['speed'], 10) : 300;
 
         // When destroyed, release the condition
-        this.$onDestroy = off;
+        scope.$on('$destroy', off);
     }
 };
 
@@ -1546,7 +1550,7 @@ FieldConditionDirective.prototype = {
         speed = attrs['speed'] ? parseInt(attrs['speed'], 10) : 300;
 
         // When destroyed, release the condition
-        this.$onDestroy = off;
+        scope.$on('$destroy', off);
     }
 };
 
@@ -1607,7 +1611,6 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.FieldDynamicModelForEachDirective = FieldDynamicModelForEachDirective;
-exports.PreFieldDynamicModelForEachDirective = PreFieldDynamicModelForEachDirective;
 var ExpressionPattern = /^\s*((?:[a-z_$][a-z0-9_$]*)(?:\.[a-z_$][a-z0-9_$]*)*)\s*$/i;
 var RemovedFlag = '$$removed';
 
@@ -1626,6 +1629,7 @@ function FieldDynamicModelForEachDirective(q, animate, modelBuilder) {
         restrict: 'A',
         transclude: 'element',
         terminal: true,
+        priority: 10,
         dependencies: ['$animate', '$compile', 'ModelBuilder'],
         require: '^^dynamicModel',
 
@@ -1669,20 +1673,24 @@ function FieldDynamicModelForEachDirective(q, animate, modelBuilder) {
                                 lastBlocks.splice(idx, 1);
                             } else {
                                 // Never before seen value
-                                var block = { value: value, scope: undefined, clone: undefined, model: createModel(field, value) };
-                                nextBlocks.push(block);
+                                nextBlocks.push({
+                                    value: value,
+                                    scope: undefined,
+                                    clone: undefined,
+                                    model: createModel(field, value)
+                                });
                             }
                         }
                     }
 
                     // Remove blocks that weren't transferred
                     for (var _i = 0, _j = lastBlocks.length; _i < _j; ++_i) {
-                        var _block = lastBlocks[_i];
-                        animate.leave(_block.clone);
+                        var block = lastBlocks[_i];
+                        animate.leave(block.clone);
 
-                        if (_block.clone[0].parentNode) _block.clone[0][RemovedFlag] = true;
+                        if (block.clone[0].parentNode) block.clone[0][RemovedFlag] = true;
 
-                        _block.scope.$destroy();
+                        block.scope.$destroy();
                     }
 
                     var previousNode = $element[0];
@@ -1742,22 +1750,6 @@ function FieldDynamicModelForEachDirective(q, animate, modelBuilder) {
     };
 }
 
-function PreFieldDynamicModelForEachDirective() {
-    return {
-        restrict: 'A',
-        priority: 1,
-        compile: function compile($element, attrs) {
-            var wrapper = angular.element('<div dynamic-model="$model"></div>');
-            var wrapperNode = wrapper[0];
-            var parentNode = $element[0];
-
-            while (parentNode.childNodes.length) {
-                wrapperNode.appendChild(parentNode.childNodes[0]);
-            }$element.append(wrapper);
-        }
-    };
-}
-
 /***/ }),
 /* 18 */
 /***/ (function(module, exports, __webpack_require__) {
@@ -1801,11 +1793,11 @@ FieldValidationForDirective.prototype = {
             return acc;
         }, []);
 
-        this.$onDestroy = function () {
+        scope.$on('$destroy', function () {
             return unbinders.forEach(function (fn) {
                 return fn();
             });
-        };
+        });
 
         if (attrs.hasOwnProperty('validators')) {
             var unwatch = scope.$watch(attrs['validators'], function (newValue) {
@@ -1898,11 +1890,11 @@ FieldValidationMessageForDirective.prototype = {
             return update(valid, errors[0]);
         })];
 
-        this.$onDestroy = function () {
+        scope.$on('$destroy', function () {
             return unbinders.forEach(function (fn) {
                 return fn();
             });
-        };
+        });
         update(true);
 
         function update(valid, error) {

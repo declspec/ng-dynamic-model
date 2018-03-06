@@ -19,7 +19,7 @@ FieldValidationMessageForDirective.prototype = {
             field.on('validate', (f, valid, errors) => update(valid, errors[0])) 
         ];
 
-        this.$onDestroy = () => unbinders.forEach(fn => fn());
+        scope.$on('$destroy', () => unbinders.forEach(fn => fn()));
         update(true);
     
         function update(valid, error) {

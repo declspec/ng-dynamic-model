@@ -177,6 +177,8 @@ export class ModelField {
         if (typeof(fn) !== 'function')
             throw new TypeError('fn must be a valid function');
 
+        const listeners = this.$$listeners[type];
+
         if (listeners && listeners.length > 0) {
             const idx = listeners.indexOf(fn);
             if (idx >= 0) listeners.splice(idx, 1);

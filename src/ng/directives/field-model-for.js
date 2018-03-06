@@ -15,8 +15,8 @@ FieldModelForDirective.prototype = {
         const render = modelController.$render;
 
         // Set up change handlers and update the UI
-        field.watch(onUpdate);
-        onUpdate();
+        scope.$on('$destroy', field.watch(onUpdate));
+        onUpdate(field.value());
 
         modelController.$render = function() {
             const value = this.$modelValue || this.$viewValue;
@@ -31,12 +31,11 @@ FieldModelForDirective.prototype = {
             return result;
         };
 
-        function onUpdate() {
+        function onUpdate(fieldValue) {
             const uiValue = modelController.$modelValue || modelController.$viewValue;
-            const modelValue = field.value();
 
-            if (uiValue !== modelValue) {
-                modelController.$viewValue = modelValue;
+            if (uiValue !== fieldValue) {
+                modelController.$viewValue = fieldValue;
                 // Make sure to call the original functions to avoid infinitely recursing.
                 commitViewValue.call(modelController);
                 render.call(modelController);

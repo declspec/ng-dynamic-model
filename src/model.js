@@ -54,18 +54,23 @@ export class Model {
     }
 
     set(path, value) {
-        if (typeof(path) === 'string')
+        if (typeof(path) !== 'string') {
+            value = path;
+            path = null;
+        }
+
+        if (path !== null)
             objectPath.set(this.$$state, path, value);
         else {
             // Update the entire state when no path is specified.
-            this.$$state = path;
+            this.$$state = value;
         }
     
         // Invoke all the subscribers
         const subscribers = this.$$subscribers.slice();
 
         for(var i = 0, j = subscribers.length; i < j; ++i) {
-            subscribers[i](this.$$state);
+            subscribers[i](this.$$state, path);
         }
 
         return this;
