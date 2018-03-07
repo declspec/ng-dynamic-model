@@ -110,6 +110,19 @@ export class Model {
         this.$$validationTrigger = trigger;
     }
 
+    hasDirtyFields() {
+        for(var path in this.$$fields) {
+            if (!this.$$fields.hasOwnProperty(path))
+                continue;
+
+            const field = this.$$fields[path];
+            if (field.isDirty() && field.isActive())
+                return true;
+        }   
+
+        return false;
+    }
+
     $findChildFields(path) {
         const value = this.get(path, null);
         const fields = [];
