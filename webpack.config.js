@@ -1,11 +1,12 @@
 const path = require('path');
 const webpack = require('webpack');
 const LibraryName = 'ng-dynamic-model';
+const MinLibraryName = `${LibraryName}.min`;
 
 module.exports = {
     entry: {
         [LibraryName]: './src/index.js',
-        [`${LibraryName}.min`]: './index.js'
+        [MinLibraryName]: './index.js'
     },
 
     output: {
