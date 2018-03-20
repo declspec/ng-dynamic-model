@@ -1,5 +1,8 @@
+import * as util from '../../util';
+
 const ExpressionPattern = /^\s*((?:[a-z_$][a-z0-9_$]*)(?:\.[a-z_$][a-z0-9_$]*)*)\s*$/i
 const RemovedFlag = '$$removed';
+const FilterContext = { '$util': util };
 
 function findBlockIndexByValue(blocks, value) {
     for(let i = 0, j = blocks.length; i < j; ++i) {
@@ -10,15 +13,14 @@ function findBlockIndexByValue(blocks, value) {
     return -1;
 }
 
-FieldRepeatForDirective.$inject = [ '$q', '$animate', 'ModelBuilder' ];
+FieldRepeatForDirective.$inject = [ '$q', '$animate', '$parse', 'ModelBuilder' ];
 
-export function FieldRepeatForDirective(q, animate, modelBuilder) {
+export function FieldRepeatForDirective(q, animate, parse, modelBuilder) {
     return {
         restrict: 'A',
         transclude: 'element',
         terminal: true,
         priority: 10,
-        dependencies: [ '$animate', '$compile', 'ModelBuilder' ],
         require: '^^dynamicModel',
     
         compile: function($element, attrs) {
@@ -33,7 +35,8 @@ export function FieldRepeatForDirective(q, animate, modelBuilder) {
                     throw new TypeError(`field-repeat-for: "${expression}" is not a valid field name`);
 
                 const field = ctrl.model.field(match[1]);
-                
+                const filter = attrs['filter'] && parse(attrs['filter']);
+
                 let lastBlocks = [];
     
                 field.addAsyncValidator((f, addError) => {
@@ -50,22 +53,19 @@ export function FieldRepeatForDirective(q, animate, modelBuilder) {
                     if (Array.isArray(newValue)) {
                         for(let i = 0, j = newValue.length; i < j; ++i) {
                             const value = newValue[i];
+
+                            if (filter && !filter(FilterContext, value))
+                                continue;
+                                
                             const idx = findBlockIndexByValue(lastBlocks, value);
-    
-                            if (idx >= 0) {
-                                // Existing value
-                                nextBlocks.push(lastBlocks[idx]);
-                                lastBlocks.splice(idx, 1);
-                            }
-                            else {
-                                // Never before seen value
-                                nextBlocks.push({ 
-                                    value: value, 
-                                    scope: undefined, 
-                                    clone: undefined, 
-                                    model: createModel(field, value) 
-                                });
-                            }
+
+                            const block = idx >= 0 
+                                ? lastBlocks.splice(idx, 1)[0] // previous block
+                                : { value, model: createModel(field, value) }; // new block since last run  
+
+                            // Keep track of the reference in relation to the source data set.
+                            block.index = i;
+                            nextBlocks.push(block);
                         }
                     }
     
@@ -92,7 +92,7 @@ export function FieldRepeatForDirective(q, animate, modelBuilder) {
                                 animate.enter(clone, null, previousNode);
                                 previousNode = clone[0];
                                 block.clone = clone;
-                                updateBlock(block, i, nextBlocks.length);
+                                updateBlock(block, i, nextBlocks.length, newValue.length);
                             });
                         }
                         else {
@@ -109,7 +109,7 @@ export function FieldRepeatForDirective(q, animate, modelBuilder) {
                             }
     
                             previousNode = block.clone[0];
-                            updateBlock(block, i, nextBlocks.length);
+                            updateBlock(block, i, nextBlocks.length, newValue.length);
                         }
                     }
     
@@ -117,10 +117,12 @@ export function FieldRepeatForDirective(q, animate, modelBuilder) {
                 }
             };
     
-            function updateBlock(block, index, totalBlocks) {
+            function updateBlock(block, index, currentBlocks, totalBlocks) {
                 block.scope.$model = block.model;
                 block.scope.$index = index;
-                block.scope.$count = totalBlocks;
+                block.scope.$count = currentBlocks;
+                block.scope.$sourceIndex = block.index;
+                block.scope.$sourceCount = totalBlocks;
             }
 
             function createModel(parentField, state) {

@@ -1181,8 +1181,6 @@ var _dynamicModel = __webpack_require__(11);
 
 var _fieldModelFor = __webpack_require__(12);
 
-var _fieldMultiModelFor = __webpack_require__(13);
-
 var _fieldConditionFor = __webpack_require__(14);
 
 var _fieldCondition = __webpack_require__(15);
@@ -1208,7 +1206,7 @@ function directive(ctor) {
     return factory;
 }
 
-var lib = angular.module('ng-dynamic-model', []).config(_config.ValidationConfig).provider('ValidatorFactory', _validatorFactory.ValidatorFactoryProvider).service('ModelBuilder', _modelBuilder.ModelBuilder).directive('dynamicModel', directive(_dynamicModel.DynamicModelDirective)).directive('fieldModelFor', directive(_fieldModelFor.FieldModelForDirective)).directive('fieldMultiModelFor', directive(_fieldMultiModelFor.FieldMultiModelForDirective)).directive('fieldConditionFor', directive(_fieldConditionFor.FieldConditionForDirective)).directive('fieldCondition', directive(_fieldCondition.FieldConditionDirective)).directive('fieldValidationFor', directive(_fieldValidationFor.FieldValidationForDirective)).directive('fieldValidationMessageFor', directive(_fieldValidationMessageFor.FieldValidationMessageForDirective)).directive('readonlyFieldFor', directive(_readonlyFieldFor.ReadonlyFieldForDirective)).directive('fieldRepeatFor', _fieldRepeatFor.FieldRepeatForDirective);
+var lib = angular.module('ng-dynamic-model', []).config(_config.ValidationConfig).provider('ValidatorFactory', _validatorFactory.ValidatorFactoryProvider).service('ModelBuilder', _modelBuilder.ModelBuilder).directive('dynamicModel', directive(_dynamicModel.DynamicModelDirective)).directive('fieldModelFor', directive(_fieldModelFor.FieldModelForDirective)).directive('fieldConditionFor', directive(_fieldConditionFor.FieldConditionForDirective)).directive('fieldCondition', directive(_fieldCondition.FieldConditionDirective)).directive('fieldValidationFor', directive(_fieldValidationFor.FieldValidationForDirective)).directive('fieldValidationMessageFor', directive(_fieldValidationMessageFor.FieldValidationMessageForDirective)).directive('readonlyFieldFor', directive(_readonlyFieldFor.ReadonlyFieldForDirective)).directive('fieldRepeatFor', _fieldRepeatFor.FieldRepeatForDirective);
 
 exports.default = lib.name;
 
@@ -1410,83 +1408,7 @@ FieldModelForDirective.prototype = {
 };
 
 /***/ }),
-/* 13 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
-exports.FieldMultiModelForDirective = FieldMultiModelForDirective;
-function FieldMultiModelForDirective(parse) {
-    this.parse = parse;
-}
-
-FieldMultiModelForDirective.prototype = {
-    restrict: 'A',
-    require: '^^dynamicModel',
-    dependencies: ['$parse'],
-    link: function link(scope, $element, attrs, modelCtrl) {
-        if (!attrs['fieldMultiModelFor'] || !attrs['value'] && !attrs['ngValue']) throw new TypeError('form-multi-model: missing required attribute "' + (!attrs['fieldMultiModelFor'] ? 'field-multi-model' : 'value') + '"');
-
-        var field = modelCtrl.model.field(attrs['fieldMultiModelFor']);
-        var element = $element.get(0);
-        var allowMultiple = attrs['type'] === 'checkbox';
-        var trackBy = attrs['trackBy'];
-
-        var value = attrs['ngValue'] ? this.parse(attrs['ngValue'])(scope, modelCtrl.model.getState()) : attrs['value'];
-
-        $element.on('change', function () {
-            if (allowMultiple || this.checked) scope.$apply(processChange);
-        });
-
-        scope.$on('$destroy', field.watch(onUpdate));
-        onUpdate(field.value());
-
-        function processChange() {
-            if (!allowMultiple) return field.setValue(value);
-
-            var model = field.value(),
-                idx = -1;
-
-            if (!Array.isArray(model)) model = model ? [model] : [];
-
-            for (var i = 0, j = model.length; i < j; ++i) {
-                if (compareValues(model[i])) {
-                    idx = i;
-                    break;
-                }
-            }
-
-            if (element.checked && idx < 0) {
-                model.push(value);
-                field.setValue(model);
-            } else if (!element.checked && idx >= 0) {
-                model.splice(idx, 1);
-                field.setValue(model);
-            }
-        }
-
-        function onUpdate(fieldValue) {
-            var shouldBeChecked = !Array.isArray(fieldValue) && compareValues(fieldValue) || Array.isArray(fieldValue) && fieldValue.some(compareValues);
-
-            if (element.checked !== shouldBeChecked) element.checked = shouldBeChecked;
-        }
-
-        function compareValues(modelValue) {
-            if (!trackBy) return modelValue == value;
-
-            return modelValue && value && (typeof modelValue === 'undefined' ? 'undefined' : _typeof(modelValue)) === (typeof value === 'undefined' ? 'undefined' : _typeof(value)) && modelValue.hasOwnProperty(trackBy) && value.hasOwnProperty(trackBy) && modelValue[trackBy] == value[trackBy];
-        }
-    }
-};
-
-/***/ }),
+/* 13 */,
 /* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1623,8 +1545,16 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.FieldRepeatForDirective = FieldRepeatForDirective;
+
+var _util = __webpack_require__(0);
+
+var util = _interopRequireWildcard(_util);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
 var ExpressionPattern = /^\s*((?:[a-z_$][a-z0-9_$]*)(?:\.[a-z_$][a-z0-9_$]*)*)\s*$/i;
 var RemovedFlag = '$$removed';
+var FilterContext = { '$util': util };
 
 function findBlockIndexByValue(blocks, value) {
     for (var i = 0, j = blocks.length; i < j; ++i) {
@@ -1634,15 +1564,14 @@ function findBlockIndexByValue(blocks, value) {
     return -1;
 }
 
-FieldRepeatForDirective.$inject = ['$q', '$animate', 'ModelBuilder'];
+FieldRepeatForDirective.$inject = ['$q', '$animate', '$parse', 'ModelBuilder'];
 
-function FieldRepeatForDirective(q, animate, modelBuilder) {
+function FieldRepeatForDirective(q, animate, parse, modelBuilder) {
     return {
         restrict: 'A',
         transclude: 'element',
         terminal: true,
         priority: 10,
-        dependencies: ['$animate', '$compile', 'ModelBuilder'],
         require: '^^dynamicModel',
 
         compile: function compile($element, attrs) {
@@ -1655,6 +1584,7 @@ function FieldRepeatForDirective(q, animate, modelBuilder) {
                 if (match === null) throw new TypeError('field-repeat-for: "' + expression + '" is not a valid field name');
 
                 var field = ctrl.model.field(match[1]);
+                var filter = attrs['filter'] && parse(attrs['filter']);
 
                 var lastBlocks = [];
 
@@ -1677,32 +1607,28 @@ function FieldRepeatForDirective(q, animate, modelBuilder) {
                     if (Array.isArray(newValue)) {
                         for (var i = 0, j = newValue.length; i < j; ++i) {
                             var value = newValue[i];
+
+                            if (filter && !filter(FilterContext, value)) continue;
+
                             var idx = findBlockIndexByValue(lastBlocks, value);
 
-                            if (idx >= 0) {
-                                // Existing value
-                                nextBlocks.push(lastBlocks[idx]);
-                                lastBlocks.splice(idx, 1);
-                            } else {
-                                // Never before seen value
-                                nextBlocks.push({
-                                    value: value,
-                                    scope: undefined,
-                                    clone: undefined,
-                                    model: createModel(field, value)
-                                });
-                            }
+                            var block = idx >= 0 ? lastBlocks.splice(idx, 1)[0] // previous block
+                            : { value: value, model: createModel(field, value) }; // new block since last run  
+
+                            // Keep track of the reference in relation to the source data set.
+                            block.index = i;
+                            nextBlocks.push(block);
                         }
                     }
 
                     // Remove blocks that weren't transferred
                     for (var _i = 0, _j = lastBlocks.length; _i < _j; ++_i) {
-                        var block = lastBlocks[_i];
-                        animate.leave(block.clone);
+                        var _block = lastBlocks[_i];
+                        animate.leave(_block.clone);
 
-                        if (block.clone[0].parentNode) block.clone[0][RemovedFlag] = true;
+                        if (_block.clone[0].parentNode) _block.clone[0][RemovedFlag] = true;
 
-                        block.scope.$destroy();
+                        _block.scope.$destroy();
                     }
 
                     var previousNode = $element[0];
@@ -1717,7 +1643,7 @@ function FieldRepeatForDirective(q, animate, modelBuilder) {
                                 animate.enter(clone, null, previousNode);
                                 previousNode = clone[0];
                                 block.clone = clone;
-                                updateBlock(block, _i2, nextBlocks.length);
+                                updateBlock(block, _i2, nextBlocks.length, newValue.length);
                             });
                         } else {
                             // Re-use the element
@@ -1733,7 +1659,7 @@ function FieldRepeatForDirective(q, animate, modelBuilder) {
                             }
 
                             previousNode = block.clone[0];
-                            updateBlock(block, _i2, nextBlocks.length);
+                            updateBlock(block, _i2, nextBlocks.length, newValue.length);
                         }
                     };
 
@@ -1745,10 +1671,12 @@ function FieldRepeatForDirective(q, animate, modelBuilder) {
                 }
             };
 
-            function updateBlock(block, index, totalBlocks) {
+            function updateBlock(block, index, currentBlocks, totalBlocks) {
                 block.scope.$model = block.model;
                 block.scope.$index = index;
-                block.scope.$count = totalBlocks;
+                block.scope.$count = currentBlocks;
+                block.scope.$sourceIndex = block.index;
+                block.scope.$sourceCount = totalBlocks;
             }
 
             function createModel(parentField, state) {

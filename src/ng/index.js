@@ -5,7 +5,6 @@ import { ValidatorFactoryProvider } from './validation/validator-factory';
 
 import { DynamicModelDirective } from './directives/dynamic-model';
 import { FieldModelForDirective } from './directives/field-model-for';
-import { FieldMultiModelForDirective } from './directives/field-multi-model-for';
 import { FieldConditionForDirective } from './directives/field-condition-for';
 import { FieldConditionDirective } from './directives/field-condition';
 import { ReadonlyFieldForDirective } from './directives/readonly-field-for';
@@ -32,7 +31,6 @@ const lib = angular.module('ng-dynamic-model', [])
 
     .directive('dynamicModel', directive(DynamicModelDirective))
     .directive('fieldModelFor', directive(FieldModelForDirective))
-    .directive('fieldMultiModelFor', directive(FieldMultiModelForDirective))
     .directive('fieldConditionFor', directive(FieldConditionForDirective))
     .directive('fieldCondition', directive(FieldConditionDirective))
     .directive('fieldValidationFor', directive(FieldValidationForDirective))

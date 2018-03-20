@@ -26,7 +26,7 @@
 
                 $scope.add = function() {
                     const value = field.value() || [];
-                    value.push({});
+                    value.push({ flag: (Math.random() * 10 |0) % 2 === 0 });
                     field.setValue(value);   
                 }
 
@@ -45,9 +45,9 @@
         <button type="button" ng-click="add()">Add</button>
         <form dynamic-model="::model">
 
-            <div field-repeat-for="{{::fieldName}}" dynamic-model="$model">
+            <div field-repeat-for="{{::fieldName}}" filter="$util.equals(flag, true)" dynamic-model="$model">
                 <div field-validation-for="test" validators="['required']">
-                    {{$index}}. <input type="text" ng-model="test" field-model-for="test" /><button ng-click="remove($index)">Remove</button>
+                    {{$index}}. <input type="text" ng-model="test" field-model-for="test" /><button ng-click="remove($sourceIndex)">Remove</button>
                     <br/>
                     <span field-validation-message-for="test"></span>
                 </div>
