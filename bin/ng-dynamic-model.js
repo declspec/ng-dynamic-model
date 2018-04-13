@@ -1181,17 +1181,19 @@ var _dynamicModel = __webpack_require__(11);
 
 var _fieldModelFor = __webpack_require__(12);
 
-var _fieldConditionFor = __webpack_require__(14);
+var _fieldConditionFor = __webpack_require__(13);
 
-var _fieldCondition = __webpack_require__(15);
+var _fieldCondition = __webpack_require__(14);
 
-var _readonlyFieldFor = __webpack_require__(16);
+var _readonlyFieldFor = __webpack_require__(15);
 
-var _fieldRepeatFor = __webpack_require__(17);
+var _fieldRepeatFor = __webpack_require__(16);
 
-var _fieldValidationFor = __webpack_require__(18);
+var _fieldValidationFor = __webpack_require__(17);
 
-var _fieldValidationMessageFor = __webpack_require__(19);
+var _fieldValidationMessageFor = __webpack_require__(18);
+
+var _addPolyfills = __webpack_require__(19);
 
 function directive(ctor) {
     var inject = ctor.dependencies || ctor.prototype.dependencies;
@@ -1206,7 +1208,7 @@ function directive(ctor) {
     return factory;
 }
 
-var lib = angular.module('ng-dynamic-model', []).config(_config.ValidationConfig).provider('ValidatorFactory', _validatorFactory.ValidatorFactoryProvider).service('ModelBuilder', _modelBuilder.ModelBuilder).directive('dynamicModel', directive(_dynamicModel.DynamicModelDirective)).directive('fieldModelFor', directive(_fieldModelFor.FieldModelForDirective)).directive('fieldConditionFor', directive(_fieldConditionFor.FieldConditionForDirective)).directive('fieldCondition', directive(_fieldCondition.FieldConditionDirective)).directive('fieldValidationFor', directive(_fieldValidationFor.FieldValidationForDirective)).directive('fieldValidationMessageFor', directive(_fieldValidationMessageFor.FieldValidationMessageForDirective)).directive('readonlyFieldFor', directive(_readonlyFieldFor.ReadonlyFieldForDirective)).directive('fieldRepeatFor', _fieldRepeatFor.FieldRepeatForDirective);
+var lib = angular.module('ng-dynamic-model', []).config(_config.ValidationConfig).provider('ValidatorFactory', _validatorFactory.ValidatorFactoryProvider).service('ModelBuilder', _modelBuilder.ModelBuilder).directive('dynamicModel', directive(_dynamicModel.DynamicModelDirective)).directive('fieldModelFor', directive(_fieldModelFor.FieldModelForDirective)).directive('fieldConditionFor', directive(_fieldConditionFor.FieldConditionForDirective)).directive('fieldCondition', directive(_fieldCondition.FieldConditionDirective)).directive('fieldValidationFor', directive(_fieldValidationFor.FieldValidationForDirective)).directive('fieldValidationMessageFor', directive(_fieldValidationMessageFor.FieldValidationMessageForDirective)).directive('readonlyFieldFor', directive(_readonlyFieldFor.ReadonlyFieldForDirective)).directive('fieldRepeatFor', _fieldRepeatFor.FieldRepeatForDirective).run(_addPolyfills.AddPolyfills);
 
 exports.default = lib.name;
 
@@ -1408,8 +1410,7 @@ FieldModelForDirective.prototype = {
 };
 
 /***/ }),
-/* 13 */,
-/* 14 */
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1450,7 +1451,7 @@ FieldConditionForDirective.prototype = {
 };
 
 /***/ }),
-/* 15 */
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1489,7 +1490,7 @@ FieldConditionDirective.prototype = {
 };
 
 /***/ }),
-/* 16 */
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1535,7 +1536,7 @@ ReadonlyFieldForDirective.prototype = {
 };
 
 /***/ }),
-/* 17 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1612,23 +1613,23 @@ function FieldRepeatForDirective(q, animate, parse, modelBuilder) {
 
                             var idx = findBlockIndexByValue(lastBlocks, value);
 
-                            var block = idx >= 0 ? lastBlocks.splice(idx, 1)[0] // previous block
+                            var nextBlock = idx >= 0 ? lastBlocks.splice(idx, 1)[0] // previous block
                             : { value: value, model: createModel(field, value) }; // new block since last run  
 
                             // Keep track of the reference in relation to the source data set.
-                            block.index = i;
-                            nextBlocks.push(block);
+                            nextBlock.index = i;
+                            nextBlocks.push(nextBlock);
                         }
                     }
 
                     // Remove blocks that weren't transferred
                     for (var _i = 0, _j = lastBlocks.length; _i < _j; ++_i) {
-                        var _block = lastBlocks[_i];
-                        animate.leave(_block.clone);
+                        var block = lastBlocks[_i];
+                        animate.leave(block.clone);
 
-                        if (_block.clone[0].parentNode) _block.clone[0][RemovedFlag] = true;
+                        if (block.clone[0].parentNode) block.clone[0][RemovedFlag] = true;
 
-                        _block.scope.$destroy();
+                        block.scope.$destroy();
                     }
 
                     var previousNode = $element[0];
@@ -1691,7 +1692,7 @@ function FieldRepeatForDirective(q, animate, parse, modelBuilder) {
 }
 
 /***/ }),
-/* 18 */
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1799,7 +1800,7 @@ function createValidator(metadata, factory) {
 }
 
 /***/ }),
-/* 19 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1843,6 +1844,42 @@ FieldValidationMessageForDirective.prototype = {
         }
     }
 };
+
+/***/ }),
+/* 19 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.AddPolyfills = AddPolyfills;
+var DataKey = 'ng-dm-polyfill-display';
+
+function AddPolyfills() {
+    // Add show/hide polyfills if jQuery isn't present
+    if (typeof angular.element.prototype.show === 'undefined') angular.element.prototype.show = show;
+
+    if (typeof angular.element.prototype.hide === 'undefined') angular.element.prototype.hide = hide;
+}
+
+function show() {
+    var previous = this.data(DataKey) || 'block';
+    this.css('display', previous);
+}
+
+function hide() {
+    // Try store the original display (defaults to block)
+    if (!this.data(DataKey)) {
+        // TODO: look at perf on getComputedStyle
+        var display = this.css('display') || getComputedStyle(this[0], null).display;
+        this.data(DataKey, display && display !== 'none' ? display : 'block');
+    }
+
+    this.css('display', 'none');
+}
 
 /***/ })
 /******/ ]);

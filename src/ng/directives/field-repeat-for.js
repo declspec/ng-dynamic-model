@@ -59,13 +59,13 @@ export function FieldRepeatForDirective(q, animate, parse, modelBuilder) {
                                 
                             const idx = findBlockIndexByValue(lastBlocks, value);
 
-                            const block = idx >= 0 
+                            const nextBlock = idx >= 0 
                                 ? lastBlocks.splice(idx, 1)[0] // previous block
                                 : { value, model: createModel(field, value) }; // new block since last run  
 
                             // Keep track of the reference in relation to the source data set.
-                            block.index = i;
-                            nextBlocks.push(block);
+                            nextBlock.index = i;
+                            nextBlocks.push(nextBlock);
                         }
                     }
     

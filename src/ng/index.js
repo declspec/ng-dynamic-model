@@ -11,6 +11,7 @@ import { ReadonlyFieldForDirective } from './directives/readonly-field-for';
 import { FieldRepeatForDirective } from './directives/field-repeat-for';
 import { FieldValidationForDirective } from './directives/field-validation-for';
 import { FieldValidationMessageForDirective } from './directives/field-validation-message-for';
+import { AddPolyfills } from './add-polyfills';
 
 function directive(ctor) {
     var inject = ctor.dependencies || ctor.prototype.dependencies;
@@ -36,6 +37,7 @@ const lib = angular.module('ng-dynamic-model', [])
     .directive('fieldValidationFor', directive(FieldValidationForDirective))
     .directive('fieldValidationMessageFor', directive(FieldValidationMessageForDirective))
     .directive('readonlyFieldFor', directive(ReadonlyFieldForDirective))
-    .directive('fieldRepeatFor', FieldRepeatForDirective);
+    .directive('fieldRepeatFor', FieldRepeatForDirective)
+    .run(AddPolyfills);
 
 export default lib.name;
