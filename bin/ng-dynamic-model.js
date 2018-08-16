@@ -1752,15 +1752,15 @@ FieldValidationForDirective.prototype = {
         onUpdated();
 
         function onUpdated() {
-            var validated = fields.every(function (f) {
-                return f.isValidated();
-            });
             var valid = fields.every(function (f) {
-                return f.isValid();
+                return f.isValidated() && f.isValid();
+            });
+            var invalid = fields.some(function (f) {
+                return f.isValidated() && !f.isValid();
             });
 
-            $element[validated && valid ? 'addClass' : 'removeClass'](validClass);
-            $element[validated && !valid ? 'addClass' : 'removeClass'](invalidClass);
+            $element[valid ? 'addClass' : 'removeClass'](validClass);
+            $element[invalid ? 'addClass' : 'removeClass'](invalidClass);
         }
     },
 

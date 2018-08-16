@@ -40,11 +40,11 @@ FieldValidationForDirective.prototype = {
         onUpdated();
 
         function onUpdated() {
-            const validated = fields.every(f => f.isValidated());
-            const valid = fields.every(f => f.isValid());
+            const valid = fields.every(f => f.isValidated() && f.isValid());
+            const invalid = fields.some(f => f.isValidated() && !f.isValid());
 
-            $element[validated && valid ? 'addClass' : 'removeClass'](validClass);
-            $element[validated && !valid ? 'addClass' : 'removeClass'](invalidClass);
+            $element[valid ? 'addClass' : 'removeClass'](validClass);
+            $element[invalid ? 'addClass' : 'removeClass'](invalidClass);
         }
     },
 
