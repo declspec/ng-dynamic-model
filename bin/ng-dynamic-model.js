@@ -396,6 +396,16 @@ var Model = exports.Model = function () {
             this.$$validationTrigger = trigger;
         }
     }, {
+        key: 'setPristine',
+        value: function setPristine() {
+            for (var path in this.$$fields) {
+                if (this.$$fields.hasOwnProperty(path)) {
+                    var field = this.$$fields[path];
+                    field.setDirty(false);
+                }
+            }
+        }
+    }, {
         key: 'hasDirtyFields',
         value: function hasDirtyFields() {
             for (var path in this.$$fields) {

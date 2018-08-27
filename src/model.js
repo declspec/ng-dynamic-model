@@ -110,6 +110,15 @@ export class Model {
         this.$$validationTrigger = trigger;
     }
 
+    setPristine() {
+        for(var path in this.$$fields) {
+            if (this.$$fields.hasOwnProperty(path)) {
+                const field = this.$$fields[path];
+                field.setDirty(false);
+            }
+        }
+    }
+
     hasDirtyFields() {
         for(var path in this.$$fields) {
             if (!this.$$fields.hasOwnProperty(path))
