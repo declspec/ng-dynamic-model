@@ -1376,6 +1376,7 @@ var DynamicModelController = function () {
     _createClass(DynamicModelController, [{
         key: 'fieldFor',
         value: function fieldFor(scope, expr, context) {
+            if (!context) context = 'dynamic-model';
             return getField(this.model, scope.$eval(expr), context);
         }
     }, {
@@ -1383,12 +1384,13 @@ var DynamicModelController = function () {
         value: function fieldsFor(scope, expr, context) {
             var _this = this;
 
+            if (!context) context = 'dynamic-model';
             var fieldNames = scope.$eval(expr);
 
             if (typeof fieldNames !== 'string' && !Array.isArray(fieldNames)) throw new TypeError(err(context, 'string or array', fieldNames));
 
             return typeof fieldNames === 'string' ? [getField(this.model, fieldNames, context)] : fieldNames.map(function (name) {
-                return getField(_this.model, name, context);
+                return getField(_this.model, name, context + ' (nested)');
             });
         }
     }]);
@@ -1403,13 +1405,13 @@ DynamicModelDirective.prototype = {
 };
 
 function err(ctx, types, actual) {
-    return (ctx || 'dynamic-model') + ': invalid field identifier value encountered; expected ' + types + ', got ' + (typeof actual === 'undefined' ? 'undefined' : _typeof(actual));
+    return ctx + ': invalid field identifier value encountered; expected ' + types + ', got ' + (typeof actual === 'undefined' ? 'undefined' : _typeof(actual));
 }
 
 function getField(model, name, context) {
     if (typeof name !== 'string') throw new TypeError(err(context, 'string', name));
 
-    if (!ExpressionPattern.test(name)) throw new TypeError((context || 'dynamic-model') + ': invalid field identifier encountered: ' + name);
+    if (!ExpressionPattern.test(name)) throw new TypeError(context + ': invalid field identifier encountered: ' + name);
 
     return model.field(name);
 }

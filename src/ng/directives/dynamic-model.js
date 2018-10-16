@@ -10,10 +10,12 @@ class DynamicModelController {
     }
 
     fieldFor(scope, expr, context) {
+        if (!context) context = 'dynamic-model';
         return getField(this.model, scope.$eval(expr), context);
     }
 
     fieldsFor(scope, expr, context) {
+        if (!context) context = 'dynamic-model';
         const fieldNames = scope.$eval(expr);
 
         if (typeof(fieldNames) !== 'string' && !Array.isArray(fieldNames))
@@ -21,7 +23,7 @@ class DynamicModelController {
 
         return typeof(fieldNames) === 'string'
             ? [ getField(this.model, fieldNames, context) ]
-            : fieldNames.map(name => getField(this.model, name, context));
+            : fieldNames.map(name => getField(this.model, name, context + ' (nested)'));
     }
 }
 
@@ -32,7 +34,7 @@ DynamicModelDirective.prototype = {
 };
 
 function err(ctx, types, actual) {
-    return `${ctx || 'dynamic-model'}: invalid field identifier value encountered; expected ${types}, got ${typeof(actual)}`; 
+    return `${ctx}: invalid field identifier value encountered; expected ${types}, got ${typeof(actual)}`; 
 }
 
 function getField(model, name, context) {
@@ -40,7 +42,7 @@ function getField(model, name, context) {
         throw new TypeError(err(context, 'string', name));
 
     if (!ExpressionPattern.test(name))
-        throw new TypeError(`${context || 'dynamic-model'}: invalid field identifier encountered: ${name}`);
+        throw new TypeError(`${context}: invalid field identifier encountered: ${name}`);
     
     return model.field(name);
 }
