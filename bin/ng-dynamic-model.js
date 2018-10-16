@@ -1361,7 +1361,7 @@ exports.DynamicModelDirective = DynamicModelDirective;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var ExpressionPattern = /^((?:[a-z_$][a-z0-9_$]*)(?:\.[a-z_$][a-z0-9_$]*)*)$/i;
+var ExpressionPattern = /^(?:[a-z_$][a-z0-9_$]*)(?:\.[a-z_$][a-z0-9_$]*)*$/i;
 
 function DynamicModelDirective() {}
 
@@ -1409,9 +1409,9 @@ function err(ctx, types, actual) {
 function getField(model, name, context) {
     if (typeof name !== 'string') throw new TypeError(err(context, 'string', name));
 
-    var match = name.match(ExpressionPattern);
-    if (!match) throw new TypeError((context || 'dynamic-model') + ': invalid field identifier encountered: ' + name);
-    return model.field(match[1]);
+    if (!ExpressionPattern.test(name)) throw new TypeError((context || 'dynamic-model') + ': invalid field identifier encountered: ' + name);
+
+    return model.field(name);
 }
 
 /***/ }),

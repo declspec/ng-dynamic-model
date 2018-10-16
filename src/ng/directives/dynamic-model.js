@@ -1,4 +1,4 @@
-const ExpressionPattern = /^((?:[a-z_$][a-z0-9_$]*)(?:\.[a-z_$][a-z0-9_$]*)*)$/i
+const ExpressionPattern = /^(?:[a-z_$][a-z0-9_$]*)(?:\.[a-z_$][a-z0-9_$]*)*$/i
 
 export function DynamicModelDirective() {}
 
@@ -38,9 +38,9 @@ function err(ctx, types, actual) {
 function getField(model, name, context) {
     if (typeof(name) !== 'string')
         throw new TypeError(err(context, 'string', name));
-    
-    const match = name.match(ExpressionPattern);
-    if (!match)
+
+    if (!ExpressionPattern.test(name))
         throw new TypeError(`${context || 'dynamic-model'}: invalid field identifier encountered: ${name}`);
-    return model.field(match[1]);
+    
+    return model.field(name);
 }
