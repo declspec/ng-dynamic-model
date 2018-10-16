@@ -1,4 +1,4 @@
-const ExpressionPattern = /^\s*((?:[a-z_$][a-z0-9_$]*)(?:\.[a-z_$][a-z0-9_$]*)*)\s*$/i
+const ExpressionPattern = /^((?:[a-z_$][a-z0-9_$]*)(?:\.[a-z_$][a-z0-9_$]*)*)$/i
 
 export function DynamicModelDirective() {}
 

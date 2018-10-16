@@ -1361,7 +1361,7 @@ exports.DynamicModelDirective = DynamicModelDirective;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var ExpressionPattern = /^\s*((?:[a-z_$][a-z0-9_$]*)(?:\.[a-z_$][a-z0-9_$]*)*)\s*$/i;
+var ExpressionPattern = /^((?:[a-z_$][a-z0-9_$]*)(?:\.[a-z_$][a-z0-9_$]*)*)$/i;
 
 function DynamicModelDirective() {}
 
