@@ -1,5 +1,3 @@
-import { set } from 'object-path';
-
 export function ReadonlyFieldForDirective(parse) { 
     this.parse = parse;
 }
@@ -9,21 +7,17 @@ ReadonlyFieldForDirective.prototype = {
     require: '^^dynamicModel',
     dependencies: [ '$parse' ],
     link: function(scope, $element, attrs, modelCtrl) {
-        if (!attrs['readonlyFieldFor'])
-            throw new TypeError('readonly-field-for: missing required attribute "readonly-field-for"');
-
         const model = modelCtrl.model;
-        const field = model.field(attrs['readonlyFieldFor']);
-        
-        let locals, expr;
+        const fields = modelCtrl.fieldsFor(scope, attrs['readonlyFieldFor'], 'readonly-field-for');
+        const expr = attrs['expr'] ? this.parse(attrs['expr']) : null;
 
-        if (attrs['expr']) {
-            expr = this.parse(attrs['expr']);
-            locals = {};
-        }
+        if (fields.length > 1 && !expr)
+            throw new TypeError('readonly-field-for: invalid value found for attribute "readonly-field-for"; expected a string when "expr" is not provided');
 
-        field.on('change', onUpdated)
-        onUpdated(field);
+        const unbinders = fields.map(f => f.on('change', onUpdated));
+        onUpdated(fields[0]);
+
+        scope.$on('$destroy', () => unbinders.forEach(fn => fn()));
 
         function onUpdated(f) {
             const val = expr ? expr(scope, model.getState()) : f.value();

@@ -10,16 +10,10 @@ FieldValidationForDirective.prototype = {
     require: '^^dynamicModel',
     dependencies: [ 'ValidatorFactory' ],
     link: function(scope, $element, attrs, modelCtrl) {
-        if (!attrs['fieldValidationFor'])
-            throw new TypeError('field-validation-for: missing required attribute "field-validation-for"');
-
+        const fields = modelCtrl.fieldsFor(scope, attrs['fieldValidationFor'], 'field-validation-for');
         const invalidClass = attrs['invalidClass'] || InvalidClass;
         const validClass = attrs['validClass'] || ValidClass;
-
-        const fields = attrs['fieldValidationFor'].split(',').map(name => {
-            return modelCtrl.model.field(name.trim());
-        });
-
+        
         const unbinders = fields.reduce((acc, f) => {
             acc.push(f.on('change', onUpdated));
             acc.push(f.on('validate', onUpdated));

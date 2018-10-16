@@ -4,10 +4,7 @@ FieldModelForDirective.prototype = {
     restrict: 'A',
     require: ['^^dynamicModel', 'ngModel'],
     link: function(scope, $element, attrs, ctrls) {
-        if (!attrs['fieldModelFor'])
-            throw new TypeError('form-model-for: missing required attribute "field-model-for"');
-        
-        const field = ctrls[0].model.field(attrs['fieldModelFor']);
+        const field = ctrls[0].fieldFor(scope, attrs['fieldModelFor'], 'field-model-for');
         const modelController = ctrls[1];
 
         // Override model controller methods     

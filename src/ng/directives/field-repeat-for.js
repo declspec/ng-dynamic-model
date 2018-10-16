@@ -1,6 +1,5 @@
 import * as util from '../../util';
 
-const ExpressionPattern = /^\s*((?:[a-z_$][a-z0-9_$]*)(?:\.[a-z_$][a-z0-9_$]*)*)\s*$/i
 const RemovedFlag = '$$removed';
 const FilterContext = { '$util': util };
 
@@ -24,17 +23,8 @@ export function FieldRepeatForDirective(q, animate, parse, modelBuilder) {
         require: '^^dynamicModel',
     
         compile: function($element, attrs) {
-            if (!attrs['fieldRepeatFor'])
-                throw new TypeError('field-repeat-for: missing required attribute "field-repeat-for"');
-
             return function(scope, $element, attrs, ctrl, transclude) {
-                const expression = attrs['fieldRepeatFor'];
-                const match = expression.match(ExpressionPattern);
-
-                if (match === null)
-                    throw new TypeError(`field-repeat-for: "${expression}" is not a valid field name`);
-
-                const field = ctrl.model.field(match[1]);
+                const field = ctrl.fieldFor(scope, attrs['fieldRepeatFor'], 'field-repeat-for');
                 const filter = attrs['filter'] && parse(attrs['filter']);
 
                 let lastBlocks = [];
