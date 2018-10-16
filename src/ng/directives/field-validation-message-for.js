@@ -1,6 +1,3 @@
-const InvalidClass = 'ng-invalid';
-const ValidClass = 'ng-pristine';
-
 export function FieldValidationMessageForDirective(validatorFactory) { 
     this.validatorFactory = validatorFactory;
 }
@@ -9,10 +6,7 @@ FieldValidationMessageForDirective.prototype = {
     restrict: 'A',
     require: '^^dynamicModel',
     link: function(scope, $element, attrs, modelCtrl) {
-        if (!attrs['fieldValidationMessageFor'])
-            throw new TypeError('field-validation-message-for: missing required attribute "field-validation-message-for"');
-
-        const field = modelCtrl.model.field(attrs['fieldValidationMessageFor']);
+        const field = modelCtrl.fieldFor(scope, attrs['fieldValidationMessageFor'], 'fieldValidationMessageFor');
 
         const unbinders = [ 
             field.on('change', () => update(true)), 

@@ -9,14 +9,14 @@ FieldConditionForDirective.prototype = {
     dependencies: ['$parse'],
     require: '^^dynamicModel',
     link: function(scope, $element, attrs, modelCtrl) {
-        if (!attrs['fieldConditionFor'] || !attrs['condition'])
-            throw new TypeError('field-condition-for: missing required attribute "' + (attrs['condition'] ? 'field-condition-for' : 'condition') + '"'); 
+        if (!attrs['condition'])
+            throw new TypeError('field-condition-for: missing required attribute "condition"'); 
 
-        const field = modelCtrl.model.field(attrs['fieldConditionFor']);
+        const fields = modelCtrl.fieldsFor(scope, attrs['fieldConditionFor'], 'field-condition-for');
         let speed = 0;
         
         const off = createCondition(attrs['condition'], modelCtrl.model, this.parser, scope, result => {
-            field.setActive(result);
+            fields.forEach(f => f.setActive(result));
             $element[result ? 'show' : 'hide'](speed);
         });
 
