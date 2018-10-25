@@ -41,14 +41,16 @@ export class Model {
         comparer = comparer || defaultComparer;
         let currentValue = objectPath.get(this.$$state, path);
 
-        return this.subscribe(state => {
-            const newValue = objectPath.get(state, path);
+        return this.subscribe((state, changedPath) => {
+            if (areRelatedPaths(changedPath, path)) {
+                const newValue = objectPath.get(state, path);
 
-            if (!comparer(currentValue, newValue)) {
-                const oldValue = currentValue;
-                currentValue = newValue;
+                if (!comparer(currentValue, newValue)) {
+                    const oldValue = currentValue;
+                    currentValue = newValue;
 
-                fn(newValue, oldValue, path);
+                    fn(newValue, oldValue, path);
+                }
             }
         });
     }
@@ -159,6 +161,18 @@ export class Model {
 
         return null;
     }
+}
+
+function areRelatedPaths(path1, path2) {
+    let len = Math.min(path1.length, path2.length);
+
+    for(let i = 0; i < len; ++i) {
+        if (path1[i] !== path2[i])
+            return false;
+    }
+
+    return path1.length === path2.length
+        || (path2.length === len ? path1 : path2)[len] === '.';
 }
 
 function defaultComparer(o1, o2) {
