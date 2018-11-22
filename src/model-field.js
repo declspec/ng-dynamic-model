@@ -122,7 +122,7 @@ export class ModelField {
         return this;
     }
 
-    validate(newValue) {
+    validate() {
         const errors = [];
         const result = this.$processValidators(addError);
 

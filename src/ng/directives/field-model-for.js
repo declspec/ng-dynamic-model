@@ -5,41 +5,41 @@ FieldModelForDirective.prototype = {
     require: ['^^dynamicModel', 'ngModel'],
     link: function(scope, $element, attrs, ctrls) {
         if (!attrs['fieldModelFor'])
-            throw new TypeError('form-model-for: missing required attribute "field-model-for"');
+            throw new TypeError('field-model-for: missing required attribute "field-model-for"');
         
         const field = ctrls[0].model.field(attrs['fieldModelFor']);
         const modelController = ctrls[1];
 
-        // Override model controller methods     
+        // Orginal ngModel method references
+        //  $commitViewValue commits the $viewValue and runs it through
+        //      the $parsers to obtain the new $modelValue
+        //  $$setModelValue is called whenever the model's value
+        //      is programmatically changed
         const commitViewValue = modelController.$commitViewValue;
-        const render = modelController.$render;
+        const setModelValue = modelController.$$setModelValue;
 
-        // Set up change handlers and update the UI
-        scope.$on('$destroy', field.watch(onUpdate));
-        onUpdate(field.value());
+        if (typeof(setModelValue) === 'undefined')
+            throw new TypeError('field-model-for: an internal ngModel function has changed, please complain loudly to the author.');
 
-        modelController.$render = function() {
-            const value = this.$modelValue || this.$viewValue;
-            if (value || modelController.$dirty)
-                field.setValue(value);
-            return render.call(this);
-        };
+        // Set up event handling within the field
+        scope.$on('$destroy', field.watch(onFieldUpdated));
+        onFieldUpdated(field.value());
 
-        modelController.$commitViewValue = function() {
-            const result = commitViewValue.call(this);
-            field.setValue(this.$modelValue || this.$viewValue);
-            return result;
-        };
+        // Monkey patch the ngModel methods to hook into the lifecycle
+        modelController.$commitViewValue = patch(commitViewValue);
+        modelController.$$setModelValue = patch(setModelValue);
 
-        function onUpdate(fieldValue) {
-            const uiValue = modelController.$modelValue || modelController.$viewValue;
+        function onFieldUpdated(newFieldValue) {
+            // Call original setModelValue (avoid the patched version)
+            return setModelValue.call(modelController, newFieldValue);
+        }
 
-            if (uiValue !== fieldValue) {
-                modelController.$viewValue = fieldValue;
-                // Make sure to call the original functions to avoid infinitely recursing.
-                commitViewValue.call(modelController);
-                render.call(modelController);
-            }
+        function patch(original) {
+            return function() {
+                const result = original.apply(this, arguments);
+                field.setValue(this.$modelValue);
+                return result;
+            };
         }
     }
 };

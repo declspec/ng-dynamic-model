@@ -44,7 +44,11 @@
     <body ng-app="test-app" ng-controller="TestController" id="content" style="font-family:Arial, Helvetica, sans-serif">
         <button type="button" ng-click="add()">Add</button>
         <form dynamic-model="::model">
-
+            <div>
+                <strong>Date</strong><br/>
+                <input type="date" name="date" ng-model="date" field-model-for="date" ng-model-options="{ 'timezone': '+0100' }" /><br/>
+                <pre><code readonly-field-for="date"></code></pre>
+            </div>
             <div field-repeat-for="{{::fieldName}}" filter="$util.equals(flag, true)" dynamic-model="$model">
                 <div field-validation-for="test" validators="['required']">
                     {{$index}}. <input type="text" ng-model="test" field-model-for="test" /><button ng-click="remove($sourceIndex)">Remove</button>
